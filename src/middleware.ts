@@ -8,7 +8,7 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get(ACCESS_TOKEN)?.value;
   const { pathname } = request.nextUrl;
 
-  if (!token && pathname.startsWith("/profile")) {
+  if (!token && pathname.startsWith("/")) {
     return NextResponse.redirect(new URL(PATH.LOGIN, request.url));
   }
 

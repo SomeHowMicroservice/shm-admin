@@ -73,7 +73,7 @@ const LoginForm = () => {
         />
       </Form.Item>
 
-      <Spin spinning={isSubmitting} tip="Đang xử lý...">
+      <Spin spinning={isSubmitting}>
         <Form.Item>
           <Button
             type="primary"

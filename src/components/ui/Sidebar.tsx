@@ -7,6 +7,7 @@ import {
   UserOutlined,
   AppstoreOutlined,
   MenuOutlined,
+  UnorderedListOutlined,
 } from "@ant-design/icons";
 import Link from "next/link";
 import { useState } from "react";
@@ -17,22 +18,27 @@ const menuItems = [
   {
     key: "dashboard",
     icon: <DashboardOutlined />,
-    label: <Link href="/dashboard">Dashboard</Link>,
+    label: <Link href="/">Dashboard</Link>,
   },
   {
     key: "orders",
     icon: <ShoppingCartOutlined />,
-    label: <Link href="/dashboard/orders">Orders</Link>,
+    label: <Link href="/orders">Orders</Link>,
   },
   {
     key: "customers",
     icon: <UserOutlined />,
-    label: <Link href="/dashboard/customer">Customers</Link>,
+    label: <Link href="/customer">Customers</Link>,
+  },
+  {
+    key: "categories",
+    icon: <UnorderedListOutlined />,
+    label: <Link href="/categories">Categories </Link>,
   },
   {
     key: "products",
     icon: <AppstoreOutlined />,
-    label: <Link href="/dashboard/products">Products</Link>,
+    label: <Link href="/products">Products</Link>,
   },
 ];
 
@@ -50,7 +56,7 @@ const Sidebar = () => {
         placement="left"
         onClose={() => setVisible(false)}
         open={visible}
-        bodyStyle={{ padding: 0 }}
+        className="p-0"
       >
         <Menu mode="inline" items={menuItems} />
       </Drawer>

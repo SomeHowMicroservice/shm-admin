@@ -13,7 +13,7 @@ export default function MainLayout({
   return (
     <div className="flex min-h-screen">
       <Sidebar />
-      <div className="flex flex-col flex-1 md:ml-[220px] bg-gray-50">
+      <div className="flex flex-col flex-1 bg-gray-50">
         <div className="flex-1 p-4">{children}</div>
       </div>
     </div>
