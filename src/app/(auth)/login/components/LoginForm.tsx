@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Form, Input, Button, message } from "antd";
+import { Form, Input, Button } from "antd";
 import { CiLock, CiUser } from "react-icons/ci";
 import { useRouter } from "next/navigation";
 import { loginUser } from "@/services/auth";
@@ -38,9 +38,9 @@ const LoginForm = () => {
       form={form}
       layout="vertical"
       onFinish={onFinish}
-      className="lg:w-1/2 w-full lg:max-w-md space-y-4"
+      className="mx-auto space-y-4 md:w-1/2 w-full"
     >
-      <h2 className="text-xl text-black font-bold mb-2">
+      <h2 className="md:text-2xl text-lg text-black font-bold mb-2 text-center">
         ĐĂNG NHẬP CHO NHÀ QUẢN TRỊ
       </h2>
       <Form.Item

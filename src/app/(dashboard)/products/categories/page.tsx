@@ -70,7 +70,7 @@ const CategoryPage = () => {
       title: "Tên danh mục",
       dataIndex: "name",
       render: (text, record) => (
-        <Link onClick={() => router.push(`/categories/${record.id}`)}>
+        <Link onClick={() => router.push(`/products/categories/${record.id}`)}>
           {text}
         </Link>
       ),
@@ -109,7 +109,7 @@ const CategoryPage = () => {
         <Button
           type="primary"
           icon={<PlusOutlined />}
-          onClick={() => router.push("/categories/create")}
+          onClick={() => router.push("/products/categories/create")}
         >
           Tạo mới
         </Button>

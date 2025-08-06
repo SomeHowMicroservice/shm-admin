@@ -44,8 +44,8 @@ export const setTokenServer = async (data: object) => {
   }
 };
 
-export const getRefreshToken = (refreshToken: string) => {
-  return axiosRequest.post("/auth/refresh-token", { refreshToken });
+export const getRefreshToken = () => {
+  return axiosRequest.get("/auth/refresh");
 };
 
 export const deleteTokenServer = async () => {
@@ -81,8 +81,13 @@ export const resetPassword = (data: {
   return axiosRequest.post("/auth/forgot-password/reset-password", data);
 };
 
+export const logout = () => {
+  return axiosRequest.post("/auth/sign-out");
+};
+
 const authAPI = {
   login,
+  logout,
   register,
   getMe,
   resetPassword,

@@ -6,11 +6,7 @@ import { useRouter } from "next/navigation";
 import { createCategory, getCategories } from "@/api/product";
 import { ICreateCategoryData } from "@/types/product";
 import { toast } from "react-toastify";
-
-interface Category {
-  id: string;
-  name: string;
-}
+import { Category } from "@/types/product";
 
 const CreateCategoryPage = () => {
   const [form] = Form.useForm();

@@ -74,7 +74,7 @@ axiosRequest.interceptors.response.use(
       if (!isRefreshing) {
         isRefreshing = true;
         try {
-          const { data } = await getRefreshToken(oldRefreshToken);
+          const { data } = await getRefreshToken();
           setTokenServer(data);
           onRefreshed(data.accessToken);
           // eslint-disable-next-line @typescript-eslint/no-unused-vars

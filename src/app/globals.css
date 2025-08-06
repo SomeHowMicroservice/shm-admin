@@ -4,6 +4,11 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --sidebarground: #f9fafb;
+}
+
+.ant-layout-sider-children {
+  background-color: var(--sidebarground);
 }
 
 @media (prefers-color-scheme: dark) {

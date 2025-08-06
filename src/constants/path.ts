@@ -12,4 +12,8 @@ export const PATH = {
   ORDER: "/user/orders",
   NOTIFICATION: "/user/notification",
   VOUCHER: "/user/voucher",
+  CATEGORY: "/categories",
+  PRODUCT: "/products",
+  CREATE_CATEGORY: "/categories/create",
+  CREATE_PRODUCT: "/products/create",
 };
