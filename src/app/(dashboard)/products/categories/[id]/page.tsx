@@ -83,7 +83,7 @@ const CategoryDetailPage = () => {
     };
 
     fetchCategory();
-  }, [id, form]);
+  }, [form, id]);
 
   useEffect(() => {
     const fetchAllCategories = async () => {

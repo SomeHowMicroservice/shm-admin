@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   Form,
   Input,
@@ -14,7 +14,7 @@ import {
   UploadFile,
   Descriptions,
 } from "antd";
-import { updateProduct } from "@/api/product";
+import { getCategoriesNoChild, updateProduct } from "@/api/product";
 import {
   Category,
   Color,
@@ -30,6 +30,12 @@ import { toPostgresTimestamp } from "@/utils/time";
 import { useParams } from "next/navigation";
 import { getProductById } from "@/api/product";
 import dayjs from "dayjs";
+import {
+  getTagsNoChild,
+  getColorsNoChild,
+  getCategories,
+  getSizesNoChild,
+} from "@/api/product";
 
 export interface ProductFormValues {
   update_images: any;
@@ -84,103 +90,121 @@ export default function EditProductPage() {
   const param = useParams();
   const productId = String(param.id);
 
-  useEffect(() => {
-    const getAndSetProduct = async () => {
-      try {
-        const res = await getProductById(productId);
-        const product = res.data.data.product;
-        setProduct(product);
+  const getAndSetProperties = async () => {
+    try {
+      const [tagsRes, colorsRes, categoriesRes, sizesRes] = await Promise.all([
+        getTagsNoChild(),
+        getColorsNoChild(),
+        getCategoriesNoChild(),
+        getSizesNoChild(),
+      ]);
 
-        const uniqueColors = Array.from(
-          new Map(
-            product.variants.map((v: Variants) => [v.color.id, v.color])
-          ).values()
+      setTags(tagsRes.data.data.tags);
+      setColors(colorsRes.data.data.colors);
+      setCategories(categoriesRes.data.data.categories);
+      setSizes(sizesRes.data.data.sizes);
+    } catch (error: any) {
+      message.error(error.message);
+    }
+  };
+
+  const getAndSetProduct = useCallback(async () => {
+    try {
+      const res = await getProductById(productId);
+      const product = res.data.data.product;
+      setProduct(product);
+
+      const uniqueColors = Array.from(
+        new Map(
+          product.variants.map((v: Variants) => [v.color.id, v.color])
+        ).values()
+      );
+      const uniqueSizes = Array.from(
+        new Map(
+          product.variants.map((v: Variants) => [v.size.id, v.size])
+        ).values()
+      );
+
+      const tagsData = product.tags;
+      const categoriesData = product.categories;
+
+      setTags(tagsData);
+      setCategories(categoriesData);
+      setColors(uniqueColors);
+      setSizes(uniqueSizes);
+      setIsSale(product.is_sale);
+      setDescription(product.description);
+
+      const mappedVariants = product.variants.map((v: Variants) => ({
+        id: v.id,
+        sku: v.sku,
+        color: v.color.name,
+        size: v.size.name,
+        quantity: v.inventory?.stock ?? 0,
+      }));
+
+      const imageMap: Record<string, any[]> = {};
+      product.images.forEach((img: any, index: number) => {
+        const match = img.url.match(
+          /([0-9a-fA-F\-]{36})_\d+\.(jpg|jpeg|png|webp)$/i
         );
-        const uniqueSizes = Array.from(
-          new Map(
-            product.variants.map((v: Variants) => [v.size.id, v.size])
-          ).values()
+        if (!match) return;
+
+        const colorId = match[1];
+        const variant = product.variants.find(
+          (v: Variants) => v.color.id === colorId
         );
-        const tagsData = product.tags;
-        const categoriesData = product.categories;
+        if (!variant) return;
 
-        setTags(tagsData);
-        setCategories(categoriesData);
-        setColors(uniqueColors);
-        setSizes(uniqueSizes);
-        setIsSale(product.is_sale);
+        const colorName = variant.color.name;
 
-        setDescription(product.description);
+        const fileObj = {
+          uid: img.id,
+          name: `image-${index + 1}`,
+          status: "done",
+          url: img.url,
+          thumbUrl: img.url,
+          isThumbnail: img.is_thumbnail || false,
+          sortOrder: img.sort_order ?? index + 1,
+          isOld: true,
+        };
 
-        const mappedVariants = product.variants.map((v: Variants) => ({
-          id: v.id,
-          sku: v.sku,
-          color: v.color.name,
-          size: v.size.name,
-          quantity: v.inventory?.stock ?? 0,
-        }));
+        if (!imageMap[colorName]) {
+          imageMap[colorName] = [];
+        }
 
-        const imageMap: Record<string, any[]> = {};
+        imageMap[colorName].push(fileObj);
+      });
 
-        product.images.forEach((img: any, index: number) => {
-          const match = img.url.match(
-            /([0-9a-fA-F\-]{36})_\d+\.(jpg|jpeg|png|webp)$/i
-          );
-          if (!match) return;
+      setColorImages(imageMap);
 
-          const colorId = match[1];
-          const variant = product.variants.find(
-            (v: Variants) => v.color.id === colorId
-          );
-          if (!variant) return;
-
-          const colorName = variant.color.name;
-
-          const fileObj: object = {
-            uid: img.id,
-            name: `image-${index + 1}`,
-            status: "done",
-            url: img.url,
-            thumbUrl: img.url,
-            isThumbnail: img.is_thumbnail || false,
-            sortOrder: img.sort_order ?? index + 1,
-            isOld: true,
-          };
-
-          if (!imageMap[colorName]) {
-            imageMap[colorName] = [];
-          }
-
-          imageMap[colorName].push(fileObj);
+      setTimeout(() => {
+        form.setFieldsValue({
+          title: product.title,
+          slug: product.slug,
+          description: product.description,
+          price: product.price,
+          is_sale: product?.is_sale,
+          sale_price: product?.sale_price,
+          start_sale: product?.start_sale ? dayjs(product.start_sale) : null,
+          end_sale: product?.end_sale ? dayjs(product.end_sale) : null,
+          tag_ids: tagsData.map((t: Tags) => t.id),
+          category_ids: categoriesData.map((c: Category) => c.id),
+          variants: mappedVariants,
         });
+      }, 10);
+    } catch (error) {
+      message.error("Không thể tải dữ liệu sản phẩm");
+      console.error(error);
+    } finally {
+      setLoadingOptions(false);
+    }
+  }, [productId, form]);
 
-        setColorImages(imageMap);
-
-        setTimeout(() => {
-          form.setFieldsValue({
-            title: product.title,
-            slug: product.slug,
-            description: product.description,
-            price: product.price,
-            is_sale: product?.is_sale,
-            sale_price: product?.sale_price,
-            start_sale: product?.start_sale ? dayjs(product.start_sale) : null,
-            end_sale: product?.end_sale ? dayjs(product.end_sale) : null,
-            tag_ids: tagsData.map((t: Tags) => t.id),
-            category_ids: categoriesData.map((c: Category) => c.id),
-            variants: mappedVariants,
-          });
-        }, 10);
-      } catch (error) {
-        message.error("Không thể tải dữ liệu sản phẩm");
-        console.error(error);
-      } finally {
-        setLoadingOptions(false);
-      }
-    };
-
+  useEffect(() => {
     getAndSetProduct();
-  }, [form, productId]);
+    getAndSetProperties();
+  }, []);
 
   const handleColorImageChange = (
     colorName: string,
@@ -189,14 +213,12 @@ export default function EditProductPage() {
     setColorImages((prev) => {
       const prevFiles = prev[colorName] || [];
 
-      // Tìm ảnh cũ đã bị xoá
       const deletedOldImages = prevFiles
         .filter((file) => file.isOld)
         .filter(
           (file) => !info.fileList.some((newFile) => newFile.uid === file.uid)
         );
 
-      // Cập nhật deleted_image_ids mà không duplicate
       setDeletedImageIds((prevIds) => {
         const newIds = deletedOldImages
           .map((img) => img.uid!)
@@ -205,7 +227,6 @@ export default function EditProductPage() {
         return [...prevIds, ...newIds];
       });
 
-      // Chuẩn hóa fileList mới
       const uniqueFiles = Array.from(
         new Map(
           info.fileList.map((file) => [
@@ -330,14 +351,10 @@ export default function EditProductPage() {
       });
     }
 
-    // DELETE images
     deletedImageIds.forEach((id) => {
       formData.append("delete_image_ids", id);
     });
 
-    console.log(deletedImageIds);
-
-    // UPDATE images (chỉ cập nhật thumbnail flag)
     values.update_images?.forEach((img: any, index: number) => {
       formData.append(`update_images[${index}][id]`, img.id);
       formData.append(
@@ -346,7 +363,6 @@ export default function EditProductPage() {
       );
     });
 
-    // NEW images
     let newImageIndex = 0;
     const usedFiles = new Set();
 
@@ -399,6 +415,7 @@ export default function EditProductPage() {
       const res = await updateProduct(productId, formData);
       message.success(res.data.message);
       setDeletedImageIds([]);
+      getAndSetProduct();
       // router.push("/products");
     } catch (error: any) {
       message.error(error.message);
@@ -485,19 +502,11 @@ export default function EditProductPage() {
             </Form.Item>
 
             <Form.Item label="Bắt đầu khuyến mãi" name="start_sale">
-              <DatePicker
-                className="w-full"
-                showTime
-                format="YYYY-MM-DD HH:mm"
-              />
+              <DatePicker className="w-full" format="YYYY-MM-DD" />
             </Form.Item>
 
             <Form.Item label="Kết thúc khuyến mãi" name="end_sale">
-              <DatePicker
-                className="w-full"
-                showTime
-                format="YYYY-MM-DD HH:mm"
-              />
+              <DatePicker className="w-full" format="YYYY-MM-DD" />
             </Form.Item>
           </div>
         )}

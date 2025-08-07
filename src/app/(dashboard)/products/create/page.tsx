@@ -15,10 +15,10 @@ import {
 import { useRouter } from "next/navigation";
 import {
   createProduct,
-  getCategories,
-  getProductColors,
-  getProductSizes,
-  getProductTags,
+  getCategoriesNoChild,
+  getColorsNoChild,
+  getSizesNoChild,
+  getTagsNoChild,
 } from "@/api/product";
 import { Category, Color, Size, Tags } from "@/types/product";
 import { Editor } from "@tinymce/tinymce-react";
@@ -63,6 +63,7 @@ export default function CreateProductPage() {
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [isSale, setIsSale] = useState(false);
   const [description, setDescription] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const [colorImages, setColorImages] = useState<Record<string, UploadFile[]>>(
     {}
@@ -72,10 +73,10 @@ export default function CreateProductPage() {
     const fetchOptions = async () => {
       try {
         const [s, c, t, cat] = await Promise.all([
-          getProductSizes(),
-          getProductColors(),
-          getProductTags(),
-          getCategories(),
+          getSizesNoChild(),
+          getColorsNoChild(),
+          getTagsNoChild(),
+          getCategoriesNoChild(),
         ]);
         setSizes(s.data.data.sizes);
         setColors(c.data.data.colors);
@@ -226,10 +227,11 @@ export default function CreateProductPage() {
       }
     });
 
-    console.log("typeof description:", typeof values.description); // 👈 phải là "string"
+    console.log("typeof description:", typeof values.description);
     console.log("description value:", values.description);
 
     try {
+      setIsLoading(true);
       const res = await createProduct(formData);
 
       console.log(res.data.data);
@@ -239,6 +241,8 @@ export default function CreateProductPage() {
     } catch (error) {
       console.error(error);
       message.error("Tạo sản phẩm thất bại");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -360,7 +364,7 @@ export default function CreateProductPage() {
           name="price"
           rules={[{ required: true, message: "Bắt buộc" }]}
         >
-          <Input type="number" />
+          <Input type="number" min={1000} />
         </Form.Item>
 
         <Form.Item label="Khuyến mãi" name="is_sale" valuePropName="checked">
@@ -371,7 +375,7 @@ export default function CreateProductPage() {
           <>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Form.Item label="Giá khuyến mãi" name="sale_price">
-                <Input type="number" placeholder="Giá giảm" />
+                <Input type="number" min={1000} />
               </Form.Item>
 
               <Form.Item label="Bắt đầu khuyến mãi" name="start_sale">
@@ -530,8 +534,14 @@ export default function CreateProductPage() {
         </Form.Item>
 
         <Form.Item className="pt-4">
-          <Button type="primary" htmlType="submit" className="bg-blue-500">
-            Tạo sản phẩm
+          <Button
+            type="primary"
+            htmlType="submit"
+            className="bg-blue-500"
+            loading={isLoading}
+            disabled={isLoading}
+          >
+            {isLoading ? "Đang xử lý " : "Tạo sản phẩm"}
           </Button>
         </Form.Item>
       </Form>

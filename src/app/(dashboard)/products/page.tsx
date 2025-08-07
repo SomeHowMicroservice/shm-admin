@@ -7,7 +7,8 @@ import { useRouter } from "next/navigation";
 import { getAllProducts } from "@/api/product";
 import { ColumnsType } from "antd/es/table";
 import EditOutlined from "@ant-design/icons/lib/icons/EditOutlined";
-import { DeleteOutlined } from "@ant-design/icons";
+import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
+import Link from "antd/es/typography/Link";
 
 interface Category {
   id: string;
@@ -88,11 +89,14 @@ const ProductListPage = () => {
       title: "Tên sản phẩm",
       dataIndex: "title",
       key: "title",
-      render: (title: string) => (
+      render: (title: string, record) => (
         <Tooltip title={title} className="cursor-pointer">
-          <div className="max-w-[200px] overflow-hidden whitespace-nowrap text-ellipsis">
+          <Link
+            href={`/products/${record.id}`}
+            className="max-w-[200px] overflow-hidden whitespace-nowrap text-ellipsis hover:underline"
+          >
             {title}
-          </div>
+          </Link>
         </Tooltip>
       ),
     },
@@ -145,9 +149,14 @@ const ProductListPage = () => {
 
   return (
     <div className="p-6 bg-white rounded shadow">
-      <h1 className="text-2xl font-semibold mb-4 text-black">
-        Danh sách sản phẩm
-      </h1>
+      <Button
+        type="primary"
+        icon={<PlusOutlined />}
+        onClick={() => router.push("/products/create")}
+        className="mb-5"
+      >
+        Tạo mới
+      </Button>
       <Table
         rowKey="id"
         columns={columns}

@@ -70,6 +70,22 @@ export const updateProduct = async (id: string, data: any) => {
   return axiosRequest.patch(`/admin/products/${id}`, data);
 };
 
+export const getTagsNoChild = () => {
+  return axiosRequest.get("/tags");
+};
+
+export const getColorsNoChild = () => {
+  return axiosRequest.get("/colors");
+};
+
+export const getSizesNoChild = () => {
+  return axiosRequest.get("/sizes");
+};
+
+export const getCategoriesNoChild = () => {
+  return axiosRequest.get("/categories/no-child");
+};
+
 const productAPI = {
   createCategory,
   getCategories,
