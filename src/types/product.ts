@@ -41,15 +41,6 @@ export interface Color {
   created_by: CreatedBy;
 }
 
-export interface Variants {
-  id: string;
-  name: string;
-  updated_at: string | number | Date;
-  created_at: string | number | Date;
-  updated_by: CreatedAt;
-  created_by: CreatedBy;
-}
-
 export interface Images {
   id: string;
   product_id: string;
@@ -69,6 +60,10 @@ export interface Tags {
 }
 
 export interface Product {
+  updated_by: any;
+  updated_at: string | number | Date;
+  created_at: string | number | Date;
+  created_by: any;
   id: string;
   name: string;
   slug: string;
@@ -84,4 +79,31 @@ export interface Product {
 export interface Category {
   id: string;
   name: string;
+}
+
+export interface Inventory {
+  id: string;
+  stock: number;
+  is_stock: boolean;
+}
+
+export interface Variants {
+  id?: string;
+  sku: string;
+  color: Color;
+  size: Size;
+  inventory: Inventory;
+}
+
+export interface Thumbnail {
+  id: string;
+  url: string;
+}
+
+export interface Product {
+  id: string;
+  title: string;
+  price: number;
+  categories: Category[];
+  thumbnail: Thumbnail;
 }

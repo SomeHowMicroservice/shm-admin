@@ -1,0 +1,495 @@
+### CREATE CATEGORY
+POST http://localhost:8080/api/v1/admin/categories
+Content-Type: application/json
+
+{
+  "name": "Áo Thun",
+  "parent_ids": ["a50d8189-8740-4f75-bddf-d7afe9778082", "9f620cb2-1801-4c51-97c9-53b89610a368"]
+}
+
+### GET CATEGORY TREE
+GET http://localhost:8080/api/v1/categories/tree
+
+### GET CATEGORIES NO CHILD
+GET http://localhost:8080/api/v1/categories/no-child
+
+### CREATE PRODUCT 
+POST http://localhost:8080/api/v1/admin/products
+Content-Type: application/json
+
+{
+  "title": "Áo Polo Athletic The Stripe White 92",
+  "description": "<ul class=\"list-disc\"><li>Chất Liệu:  Polyester</li><li>Form Áo:  Oversize</li><li>Độ Co Giãn:  Trung Bình</li><li>Tay Áo: Tay Ngắn</li><li>Phong Cách:  Street Style</li></ul>",
+  "price": 400000,
+  "is_sale": false,
+  "category_ids": ["8eeed0f3-f579-40ab-8efc-844cee5b88e3"]
+}
+
+### GET PRODUCT BY SLUG
+GET http://localhost:8080/api/v1/products/ao-polo-athletic-the-stripe-white-92
+
+### CREATE COLOR
+POST http://localhost:8080/api/v1/admin/colors
+Content-Type: application/json
+
+{
+  "name": "Xanh Đen"
+}
+
+### CREATE SIZE 
+POST http://localhost:8080/api/v1/admin/sizes
+Content-Type: application/json
+
+{
+  "name": "XL"
+}
+
+### CREATE TAG
+POST http://localhost:8080/api/v1/admin/tags
+Content-Type: application/json
+
+{
+  "name": "Sport"
+}
+
+### GET PRODUCTS BY CATEGORY
+GET http://localhost:8080/api/v1/categories/ao-polo/products
+
+### GET ALL CATEGORIES
+GET http://localhost:8080/api/v1/admin/categories
+
+### GET CATEGORY BY ID
+GET http://localhost:8080/api/v1/admin/categories/a50d8189-8740-4f75-bddf-d7afe9778082
+
+### UPDATE CATEGORY
+PUT http://localhost:8080/api/v1/admin/categories/e849593e-28b2-4003-bfec-f9cfd7260013
+Content-Type: application/json
+
+{
+  "name": "Áo Khoác",
+  "slug": "ao-khoac",
+  "parent_ids": ["a50d8189-8740-4f75-bddf-d7afe9778082", "9f620cb2-1801-4c51-97c9-53b89610a368"]
+}
+
+### GET ALL COLORS
+GET http://localhost:8080/api/v1/admin/colors
+
+### GET ALL SIZES
+GET http://localhost:8080/api/v1/admin/sizes
+
+### GET ALL TAGS ADMIN
+GET http://localhost:8080/api/v1/admin/tags
+
+### GET ALL TAGS
+GET http://localhost:8080/api/v1/tags
+
+### UPDATE TAG 
+PUT http://localhost:8080/api/v1/admin/tags/7b0afeb4-7204-4a94-bf29-0b4c37f36258
+Content-Type: application/json
+
+{
+  "name": "Casual"
+}
+
+### CREATE PRODUCT
+POST http://localhost:8080/api/v1/admin/products
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="title"
+
+Áo Polo Regular Deep Blue Side
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="description"
+
+<li>Chất Liệu:  Cá Sấu CVC</li><li>Form Áo:  Regular</li><li>Độ Co Giãn:  Trung Bình</li><li>Tay Áo: Tay Ngắn</li><li>Phong Cách:  Casual</li>
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="price"
+
+380000
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="is_sale"
+
+true
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="sale_price"
+
+350000
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="start_sale"
+
+2025-08-06
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="end_sale"
+
+2025-10-06
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="category_ids"
+
+8eeed0f3-f579-40ab-8efc-844cee5b88e3
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="category_ids"
+
+27efd457-5cfe-4d69-a9bd-037590ff2d14
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="tag_ids"
+
+7b0afeb4-7204-4a94-bf29-0b4c37f36258
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="tag_ids"
+
+770ba066-edc1-46e2-8ca4-e2681e324458
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="variants[0][sku]"
+
+PL0189-1
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="variants[0][color_id]"
+
+b630e877-660c-42b8-8754-91a4ec3d7ea3
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="variants[0][size_id]"
+
+253d9768-2a95-4cc5-a04c-1c168f8ccaba
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="variants[0][quantity]"
+
+100
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="variants[1][sku]"
+
+PL0189-2
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="variants[1][color_id]"
+
+b630e877-660c-42b8-8754-91a4ec3d7ea3
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="variants[1][size_id]"
+
+35d0780f-313a-41e9-be70-5e40f79ff7f0
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="variants[1][quantity]"
+
+100
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="variants[2][sku]"
+
+PL0189-3
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="variants[2][color_id]"
+
+b630e877-660c-42b8-8754-91a4ec3d7ea3
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="variants[2][size_id]"
+
+9a411270-8214-4651-9f8e-dcd0401fa955
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="variants[2][quantity]"
+
+100
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="variants[3][sku]"
+
+PL0189-4
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="variants[3][color_id]"
+
+b630e877-660c-42b8-8754-91a4ec3d7ea3
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="variants[3][size_id]"
+
+1eb1e34f-0fbd-486b-8754-21bd20e6f6d3
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="variants[3][quantity]"
+
+100
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="images[0][color_id]"
+
+b630e877-660c-42b8-8754-91a4ec3d7ea3
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="images[0][is_thumbnail]"
+
+true
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="images[0][sort_order]"
+
+1
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="images[0][file]"; filename="pl0189_xanhden_1.jpg"
+Content-Type: image/jpg
+
+< ./upload/pl0189_xanhden_1.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="images[1][color_id]"
+
+b630e877-660c-42b8-8754-91a4ec3d7ea3
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="images[1][is_thumbnail]"
+
+false
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="images[1][sort_order]"
+
+2
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="images[1][file]"; filename="pl0189_xanhden_2.jpg"
+Content-Type: image/jpg
+
+< ./upload/pl0189_xanhden_2.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="images[2][color_id]"
+
+b630e877-660c-42b8-8754-91a4ec3d7ea3
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="images[2][is_thumbnail]"
+
+false
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="images[2][sort_order]"
+
+3
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="images[2][file]"; filename="pl0189_xanhden_3.jpg"
+Content-Type: image/jpg
+
+< ./upload/pl0189_xanhden_3.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="images[3][color_id]"
+
+b630e877-660c-42b8-8754-91a4ec3d7ea3
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="images[3][is_thumbnail]"
+
+false
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="images[3][sort_order]"
+
+4
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="images[3][file]"; filename="pl0189_xanhden_4.jpg"
+Content-Type: image/jpg
+
+< ./upload/pl0189_xanhden_4.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="images[4][color_id]"
+
+b630e877-660c-42b8-8754-91a4ec3d7ea3
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="images[4][is_thumbnail]"
+
+false
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="images[4][sort_order]"
+
+5
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="images[4][file]"; filename="pl0189_xanhden_5.jpg"
+Content-Type: image/jpg
+
+< ./upload/pl0189_xanhden_5.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="images[5][color_id]"
+
+b630e877-660c-42b8-8754-91a4ec3d7ea3
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="images[5][is_thumbnail]"
+
+false
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="images[5][sort_order]"
+
+6
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="images[5][file]"; filename="pl0189_xanhden_6.jpg"
+Content-Type: image/jpg
+
+< ./upload/pl0189_xanhden_6.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="images[6][color_id]"
+
+b630e877-660c-42b8-8754-91a4ec3d7ea3
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="images[6][is_thumbnail]"
+
+false
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="images[6][sort_order]"
+
+7
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="images[6][file]"; filename="pl0189_xanhden_7.jpg"
+Content-Type: image/jpg
+
+< ./upload/pl0189_xanhden_7.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+
+### GET PRODUCT BY ID
+GET http://localhost:8080/api/v1/admin/products/d49bc7c5-8716-4f9a-a260-bace886ace7e
+
+### GET ALL PRODUCTS ADMIN
+GET http://localhost:8080/api/v1/admin/products
+
+// Xóa Ảnh Thun Trắng 2 và 5
+// Cập nhật ảnh đen thành thumbnail, bỏ thumbnail ảnh trắng
+// Upload 1 ảnh cho áo Hồng 
+// Xóa Trắng và Đen XL
+// Sửa SKU Đen S và Quantity 
+// Thêm S M L XL cho màu Hồng
+Content-Disposition: form-data; name="delete_image_ids"
+
+d1e869dd-38a1-49b7-b6c3-7fa71d7020fe
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="delete_image_ids"
+
+0eb1411a-e555-4e75-99b5-53458b4a435a
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="update_images[0][id]"
+
+d3a99441-624d-462d-ac17-d28cb5df8657
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="update_images[0][is_thumbnail]"
+
+false
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="update_images[1][id]"
+
+f596992b-c248-4ff1-a30f-29d8e9fec014
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="update_images[1][is_thumbnail]"
+
+true
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+
+### UPDATE PRODUCT 
+PATCH http://localhost:8080/api/v1/admin/products/d49bc7c5-8716-4f9a-a260-bace886ace7e
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="delete_image_ids"
+
+d1e869dd-38a1-49b7-b6c3-7fa71d7020fe
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="delete_image_ids"
+
+0eb1411a-e555-4e75-99b5-53458b4a435a
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="update_images[0][id]"
+
+d3a99441-624d-462d-ac17-d28cb5df8657
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="update_images[0][is_thumbnail]"
+
+false
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="update_images[1][id]"
+
+f596992b-c248-4ff1-a30f-29d8e9fec014
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="update_images[1][is_thumbnail]"
+
+true
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="new_images[0][color_id]"
+
+928d3aae-16e3-41cd-b192-c8c3b30d3b21
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="new_images[0][is_thumbnail]"
+
+false
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="new_images[0][sort_order]"
+
+1
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="new_images[0][file]"; filename="at0249_den_1.jpg"
+Content-Type: image/jpg
+
+< ./upload/at0249_den_1.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="delete_variant_ids"
+
+1e679788-d4ed-4804-ad20-23d551023271
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="delete_variant_ids"
+
+2496aeb2-ec8e-46b1-9d45-6a1a8432dfbf
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="update_variants[0][id]"
+
+5156d14b-0fb4-4fb4-bb88-ef7c6ad51187
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="update_variants[0][sku]"
+
+AT0249-01
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="update_variants[0][quantity]"
+
+200
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="new_variants[0][sku]"
+
+AT0249-9
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="new_variants[0][color_id]"
+
+928d3aae-16e3-41cd-b192-c8c3b30d3b21
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="new_variants[0][size_id]"
+
+253d9768-2a95-4cc5-a04c-1c168f8ccaba
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="new_variants[0][quantity]"
+
+100
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="new_variants[1][sku]"
+
+AT0249-10
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="new_variants[1][color_id]"
+
+928d3aae-16e3-41cd-b192-c8c3b30d3b21
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="new_variants[1][size_id]"
+
+35d0780f-313a-41e9-be70-5e40f79ff7f0
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="new_variants[1][quantity]"
+
+100
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="new_variants[2][sku]"
+
+AT0249-11
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="new_variants[2][color_id]"
+
+928d3aae-16e3-41cd-b192-c8c3b30d3b21
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="new_variants[2][size_id]"
+
+9a411270-8214-4651-9f8e-dcd0401fa955
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="new_variants[2][quantity]"
+
+100
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="new_variants[3][sku]"
+
+AT0249-12
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="new_variants[3][color_id]"
+
+928d3aae-16e3-41cd-b192-c8c3b30d3b21
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="new_variants[3][size_id]"
+
+1eb1e34f-0fbd-486b-8754-21bd20e6f6d3
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="new_variants[3][quantity]"
+
+100
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+

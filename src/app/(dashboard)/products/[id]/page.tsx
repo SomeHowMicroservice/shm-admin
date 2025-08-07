@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -13,19 +14,25 @@ import {
   UploadFile,
   Descriptions,
 } from "antd";
-import { useRouter } from "next/navigation";
-import { createProduct } from "@/api/product";
-import { Category, Color, Size, Tags } from "@/types/product";
+import { updateProduct } from "@/api/product";
+import {
+  Category,
+  Color,
+  Product,
+  Size,
+  Tags,
+  Variants,
+} from "@/types/product";
 import { Editor } from "@tinymce/tinymce-react";
 import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import ColorImageUpload from "../create/components/UploadImage";
 import { toPostgresTimestamp } from "@/utils/time";
 import { useParams } from "next/navigation";
 import { getProductById } from "@/api/product";
-import { v4 as uuidv4 } from "uuid";
 import dayjs from "dayjs";
 
 export interface ProductFormValues {
+  update_images: any;
   title: string;
   category_ids: string[];
   image: string;
@@ -39,6 +46,7 @@ export interface ProductFormValues {
   color?: string;
   tag_ids?: string[];
   variants?: Array<{
+    id: undefined;
     sku: string;
     quantity: number;
     size: string;
@@ -48,29 +56,32 @@ export interface ProductFormValues {
 }
 
 const { Option } = Select;
+interface MyUploadFile extends UploadFile<any> {
+  isOld?: boolean;
+}
 
 export default function EditProductPage() {
   const apiKey = process.env.NEXT_PUBLIC_TINY_MCE_API_KEY;
 
-  const router = useRouter();
   const [form] = Form.useForm();
 
-  const [product, setProduct] = useState(null);
+  const [product, setProduct] = useState<Product>();
 
-  const [sizes, setSizes] = useState<Size[]>([]);
-  const [colors, setColors] = useState<Color[]>([]);
+  const [sizes, setSizes] = useState<any[]>([]);
+  const [colors, setColors] = useState<any[]>([]);
   const [tags, setTags] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [isSale, setIsSale] = useState(false);
   const [description, setDescription] = useState<string>("");
-
-  const [colorImages, setColorImages] = useState<Record<string, UploadFile[]>>(
-    {}
-  );
+  const [deletedImageIds, setDeletedImageIds] = useState<string[]>([]);
+  const [deleteVariantIds, setDeleteVariantIds] = useState<string[]>([]);
+  const [colorImages, setColorImages] = useState<
+    Record<string, MyUploadFile[]>
+  >({});
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const param = useParams();
-
   const productId = String(param.id);
 
   useEffect(() => {
@@ -81,53 +92,59 @@ export default function EditProductPage() {
         setProduct(product);
 
         const uniqueColors = Array.from(
-          new Map(product.variants.map((v) => [v.color.id, v.color])).values()
+          new Map(
+            product.variants.map((v: Variants) => [v.color.id, v.color])
+          ).values()
         );
         const uniqueSizes = Array.from(
-          new Map(product.variants.map((v) => [v.size.id, v.size])).values()
+          new Map(
+            product.variants.map((v: Variants) => [v.size.id, v.size])
+          ).values()
         );
         const tagsData = product.tags;
         const categoriesData = product.categories;
 
-        // Set dropdown options
         setTags(tagsData);
         setCategories(categoriesData);
         setColors(uniqueColors);
         setSizes(uniqueSizes);
-        setIsSale(product.is_sale); // Quan trọng nếu bạn conditionally render
+        setIsSale(product.is_sale);
 
-        // Set mô tả nếu bạn dùng Editor riêng
         setDescription(product.description);
 
-        // Map variants
-        const mappedVariants = product.variants.map((v) => ({
+        const mappedVariants = product.variants.map((v: Variants) => ({
+          id: v.id,
           sku: v.sku,
           color: v.color.name,
           size: v.size.name,
           quantity: v.inventory?.stock ?? 0,
         }));
 
-        // Gán ảnh vào từng màu
         const imageMap: Record<string, any[]> = {};
 
-        product.images.forEach((img, index) => {
-          const match = img.url.match(/([0-9a-fA-F\-]{36})_\d+\.jpg$/);
+        product.images.forEach((img: any, index: number) => {
+          const match = img.url.match(
+            /([0-9a-fA-F\-]{36})_\d+\.(jpg|jpeg|png|webp)$/i
+          );
           if (!match) return;
 
           const colorId = match[1];
-          const variant = product.variants.find((v) => v.color.id === colorId);
+          const variant = product.variants.find(
+            (v: Variants) => v.color.id === colorId
+          );
           if (!variant) return;
 
           const colorName = variant.color.name;
 
-          const fileObj: any = {
-            uid: uuidv4(),
+          const fileObj: object = {
+            uid: img.id,
             name: `image-${index + 1}`,
             status: "done",
             url: img.url,
             thumbUrl: img.url,
             isThumbnail: img.is_thumbnail || false,
             sortOrder: img.sort_order ?? index + 1,
+            isOld: true,
           };
 
           if (!imageMap[colorName]) {
@@ -150,7 +167,7 @@ export default function EditProductPage() {
             start_sale: product?.start_sale ? dayjs(product.start_sale) : null,
             end_sale: product?.end_sale ? dayjs(product.end_sale) : null,
             tag_ids: tagsData.map((t: Tags) => t.id),
-            category_ids: categoriesData.map((c) => c.id),
+            category_ids: categoriesData.map((c: Category) => c.id),
             variants: mappedVariants,
           });
         }, 10);
@@ -163,31 +180,46 @@ export default function EditProductPage() {
     };
 
     getAndSetProduct();
-  }, []);
+  }, [form, productId]);
 
   const handleColorImageChange = (
     colorName: string,
     info: { fileList: UploadFile[] }
   ) => {
-    const existingFiles = new Set<string>();
-    const filteredList: UploadFile[] = [];
+    setColorImages((prev) => {
+      const prevFiles = prev[colorName] || [];
 
-    info.fileList.forEach((file, index) => {
-      const fileKey = file.uid || file.name;
-      if (!existingFiles.has(fileKey)) {
-        filteredList.push({
-          ...file,
-          uid: file.uid || `${colorName}-${Date.now()}-${index}`,
-          status: file.status || "done",
-        });
-        existingFiles.add(fileKey);
-      }
+      // Tìm ảnh cũ đã bị xoá
+      const deletedOldImages = prevFiles
+        .filter((file) => file.isOld)
+        .filter(
+          (file) => !info.fileList.some((newFile) => newFile.uid === file.uid)
+        );
+
+      // Cập nhật deleted_image_ids mà không duplicate
+      setDeletedImageIds((prevIds) => {
+        const newIds = deletedOldImages
+          .map((img) => img.uid!)
+          .filter((id) => !prevIds.includes(id));
+
+        return [...prevIds, ...newIds];
+      });
+
+      // Chuẩn hóa fileList mới
+      const uniqueFiles = Array.from(
+        new Map(
+          info.fileList.map((file) => [
+            file.uid,
+            { ...file, status: file.status || "done" },
+          ])
+        ).values()
+      );
+
+      return {
+        ...prev,
+        [colorName]: uniqueFiles,
+      };
     });
-
-    setColorImages((prev) => ({
-      ...prev,
-      [colorName]: filteredList,
-    }));
   };
 
   const getSelectedColors = () => {
@@ -202,6 +234,7 @@ export default function EditProductPage() {
   };
 
   const onFinish = async (values: ProductFormValues) => {
+    console.log("Form values:", values);
     if (
       values.is_sale &&
       (!values.sale_price || !values.start_sale || !values.end_sale)
@@ -246,22 +279,75 @@ export default function EditProductPage() {
       formData.append("category_ids", String(id))
     );
 
-    // Append variants
-    values.variants?.forEach((attr, index) => {
-      formData.append(`variants[${index}][sku]`, attr.sku);
-      formData.append(`variants[${index}][quantity]`, String(attr.quantity));
+    deleteVariantIds.forEach((id) => {
+      formData.append("delete_variant_ids", id);
+    });
+
+    let newIndex = 0;
+    let updateIndex = 0;
+
+    if (values.variants) {
+      values.variants.forEach((variant) => {
+        const formVariant = {
+          sku: variant.sku,
+          quantity: variant.quantity,
+          color_id: colorMap[variant.color],
+          size_id: sizeMap[variant.size],
+        };
+
+        if (variant.id !== undefined && variant.id !== null) {
+          formData.append(`update_variants[${updateIndex}][id]`, variant.id);
+          formData.append(`update_variants[${updateIndex}][sku]`, variant.sku);
+          formData.append(
+            `update_variants[${updateIndex}][quantity]`,
+            String(variant.quantity)
+          );
+          formData.append(
+            `update_variants[${updateIndex}][color_id]`,
+            formVariant.color_id
+          );
+          formData.append(
+            `update_variants[${updateIndex}][size_id]`,
+            formVariant.size_id
+          );
+          updateIndex++;
+        } else {
+          formData.append(`new_variants[${newIndex}][sku]`, variant.sku);
+          formData.append(
+            `new_variants[${newIndex}][quantity]`,
+            String(variant.quantity)
+          );
+          formData.append(
+            `new_variants[${newIndex}][color_id]`,
+            formVariant.color_id
+          );
+          formData.append(
+            `new_variants[${newIndex}][size_id]`,
+            formVariant.size_id
+          );
+          newIndex++;
+        }
+      });
+    }
+
+    // DELETE images
+    deletedImageIds.forEach((id) => {
+      formData.append("delete_image_ids", id);
+    });
+
+    console.log(deletedImageIds);
+
+    // UPDATE images (chỉ cập nhật thumbnail flag)
+    values.update_images?.forEach((img: any, index: number) => {
+      formData.append(`update_images[${index}][id]`, img.id);
       formData.append(
-        `variants[${index}][color_id]`,
-        String(colorMap[attr.color])
-      );
-      formData.append(
-        `variants[${index}][size_id]`,
-        String(sizeMap[attr.size])
+        `update_images[${index}][is_thumbnail]`,
+        String(img.is_thumbnail)
       );
     });
 
-    // Append images theo màu
-    let imageIndex = 0;
+    // NEW images
+    let newImageIndex = 0;
     const usedFiles = new Set();
 
     for (const [colorName, fileList] of Object.entries(colorImages)) {
@@ -269,20 +355,28 @@ export default function EditProductPage() {
 
       fileList.forEach((file, idx) => {
         const fileKey = file.uid || file.name;
-
         if (usedFiles.has(fileKey)) return;
 
         if (file.originFileObj) {
-          formData.append(`images[${imageIndex}][file]`, file.originFileObj);
-          formData.append(`images[${imageIndex}][color_id]`, String(color_id));
           formData.append(
-            `images[${imageIndex}][is_thumbnail]`,
+            `new_images[${newImageIndex}][file]`,
+            file.originFileObj
+          );
+          formData.append(
+            `new_images[${newImageIndex}][color_id]`,
+            String(color_id)
+          );
+          formData.append(
+            `new_images[${newImageIndex}][is_thumbnail]`,
             idx === 0 ? "true" : "false"
           );
-          formData.append(`images[${imageIndex}][sort_order]`, String(idx + 1));
-          imageIndex++;
+          formData.append(
+            `new_images[${newImageIndex}][sort_order]`,
+            String(idx + 1)
+          );
 
           usedFiles.add(fileKey);
+          newImageIndex++;
         }
       });
     }
@@ -300,19 +394,16 @@ export default function EditProductPage() {
       }
     });
 
-    console.log("typeof description:", typeof values.description); // 👈 phải là "string"
-    console.log("description value:", values.description);
-
     try {
-      const res = await createProduct(formData);
-
-      console.log(res.data.data);
-
+      setIsLoading(true);
+      const res = await updateProduct(productId, formData);
       message.success(res.data.message);
-      router.push("/products");
-    } catch (error) {
-      console.error(error);
-      message.error("Tạo sản phẩm thất bại");
+      setDeletedImageIds([]);
+      // router.push("/products");
+    } catch (error: any) {
+      message.error(error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -509,7 +600,19 @@ export default function EditProductPage() {
                     >
                       {/* Icon xoá ở góc phải trên */}
                       <MinusCircleOutlined
-                        onClick={() => remove(name)}
+                        onClick={() => {
+                          const variant = form.getFieldValue([
+                            "variants",
+                            name,
+                          ]);
+                          if (variant?.id) {
+                            setDeleteVariantIds((prev) => [
+                              ...prev,
+                              variant.id,
+                            ]);
+                          }
+                          remove(name);
+                        }}
                         className="absolute top-2 right-2 text-red-500 hover:text-red-700 text-xl cursor-pointer"
                       />
 
@@ -637,9 +740,11 @@ export default function EditProductPage() {
             <Button
               type="primary"
               htmlType="submit"
-              className="bg-blue-500 mt-4"
+              className="bg-blue-500 flex items-center justify-center"
+              loading={isLoading}
+              disabled={isLoading}
             >
-              Cập nhật
+              {isLoading ? "Đang cập nhật" : "Cập nhật"}
             </Button>
           </Form.Item>
         </div>
