@@ -118,7 +118,7 @@ const CategoryDetailPage = () => {
   return (
     <div className="p-4 max-w-2xl mx-auto">
       <Button
-        onClick={() => router.push("/categories")}
+        onClick={() => router.push("/products/categories")}
         style={{ marginBottom: 16 }}
       >
         ← Quay lại

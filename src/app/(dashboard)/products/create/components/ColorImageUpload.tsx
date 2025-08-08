@@ -16,11 +16,15 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Upload, Image, UploadFile, Tooltip, Button, message } from "antd";
 import { PlusOutlined, StarOutlined } from "@ant-design/icons";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { getBase64 } from "@/utils/image";
 
-type CustomUploadFile = UploadFile & { isThumbnail?: boolean };
+type CustomUploadFile = UploadFile & {
+  isThumbnail?: boolean;
+  isOld?: boolean;
+  sortOrder?: number;
+};
 
 const uploadButton = (
   <div
@@ -52,7 +56,6 @@ const SortableItem = ({
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id });
-
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -60,7 +63,6 @@ const SortableItem = ({
     width: 96,
     height: 96,
   };
-
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
       {children}
@@ -72,6 +74,7 @@ const ColorImageUpload = ({
   colorName,
   initialList,
   handleColorImageChange,
+  onSetThumbnail,
 }: {
   colorName: string;
   initialList: CustomUploadFile[];
@@ -79,8 +82,20 @@ const ColorImageUpload = ({
     color: string,
     info: { fileList: CustomUploadFile[] }
   ) => void;
+  onSetThumbnail: (colorName: string, uid: string) => void;
 }) => {
-  const [fileList, setFileList] = useState<CustomUploadFile[]>(initialList);
+  // sync với prop initialList khi parent thay đổi
+  const sortByOrder = (list: CustomUploadFile[] = []) =>
+    [...list].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+  const [fileList, setFileList] = useState<CustomUploadFile[]>(
+    sortByOrder(initialList || [])
+  );
+
+  useEffect(() => {
+    setFileList(sortByOrder(initialList || []));
+  }, [initialList]);
+
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState("");
 
@@ -108,16 +123,15 @@ const ColorImageUpload = ({
           ...file,
           uid: file.uid || uuidv4(),
           thumbUrl: thumb,
-        };
+        } as CustomUploadFile;
       })
     );
 
     const unique = updatedList.filter(
       (f) => !fileList.some((e) => e.uid === f.uid)
     );
-
     const merged = [...fileList, ...unique].map((f, i) => ({
-      ...f,
+      ...(f as CustomUploadFile),
       sortOrder: i + 1,
     }));
 
@@ -136,24 +150,9 @@ const ColorImageUpload = ({
   const handleRemove = (file: UploadFile) => {
     const newList = fileList
       .filter((f) => f.uid !== file.uid)
-      .map((f, i) => ({
-        ...f,
-        sortOrder: i + 1,
-      }));
-
+      .map((f, i) => ({ ...(f as CustomUploadFile), sortOrder: i + 1 }));
     setFileList(newList);
     handleColorImageChange(colorName, { fileList: newList });
-  };
-
-  const handleSetThumbnail = (uid: string) => {
-    const updated = fileList.map((f) => ({
-      ...f,
-      isThumbnail: f.uid === uid,
-    }));
-
-    setFileList(updated);
-    handleColorImageChange(colorName, { fileList: updated });
-    message.success("Đã chọn ảnh thumbnail.");
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -163,7 +162,7 @@ const ColorImageUpload = ({
       const oldIndex = fileList.findIndex((f) => f.uid === active.id);
       const newIndex = fileList.findIndex((f) => f.uid === over.id);
       const newList = arrayMove(fileList, oldIndex, newIndex).map((f, i) => ({
-        ...f,
+        ...(f as CustomUploadFile),
         sortOrder: i + 1,
       }));
       setFileList(newList);
@@ -188,7 +187,7 @@ const ColorImageUpload = ({
         onDragEnd={handleDragEnd}
       >
         <SortableContext
-          items={fileList.map((f) => f.uid)}
+          items={fileList.map((f) => String(f.uid))}
           strategy={horizontalListSortingStrategy}
         >
           <Upload
@@ -211,11 +210,9 @@ const ColorImageUpload = ({
               ) : null
             }
             itemRender={(originNode, file) => (
-              <SortableItem key={file.uid} id={file.uid}>
+              <SortableItem key={String(file.uid)} id={String(file.uid)}>
                 <div style={{ position: "relative", width: 96, height: 96 }}>
                   {originNode}
-
-                  {/* Nút chọn thumbnail */}
                   <Button
                     icon={<StarOutlined />}
                     size="small"
@@ -234,7 +231,7 @@ const ColorImageUpload = ({
                       border: "none",
                       boxShadow: "0 0 2px rgba(0,0,0,0.2)",
                     }}
-                    onClick={() => handleSetThumbnail(file.uid)}
+                    onClick={() => onSetThumbnail(colorName, String(file.uid))}
                   />
                 </div>
               </SortableItem>

@@ -82,6 +82,8 @@ export interface Category {
 }
 
 export interface Inventory {
+  sold_quantity: number;
+  quantity: number;
   id: string;
   stock: number;
   is_stock: boolean;

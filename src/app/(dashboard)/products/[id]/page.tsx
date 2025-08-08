@@ -25,7 +25,7 @@ import {
 } from "@/types/product";
 import { Editor } from "@tinymce/tinymce-react";
 import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
-import ColorImageUpload from "../create/components/UploadImage";
+import ColorImageUpload from "../create/components/ColorImageUpload";
 import { toPostgresTimestamp } from "@/utils/time";
 import { useParams } from "next/navigation";
 import { getProductById } from "@/api/product";
@@ -33,9 +33,9 @@ import dayjs from "dayjs";
 import {
   getTagsNoChild,
   getColorsNoChild,
-  getCategories,
   getSizesNoChild,
 } from "@/api/product";
+import isEqual from "lodash/isEqual";
 
 export interface ProductFormValues {
   update_images: any;
@@ -52,9 +52,14 @@ export interface ProductFormValues {
   color?: string;
   tag_ids?: string[];
   variants?: Array<{
+    size_id: any;
+    color_id: any;
     id: undefined;
     sku: string;
     quantity: number;
+    sold_quantity: number;
+    stock: number;
+    isStock: boolean;
     size: string;
     color: string;
     images?: UploadFile[];
@@ -63,6 +68,8 @@ export interface ProductFormValues {
 
 const { Option } = Select;
 interface MyUploadFile extends UploadFile<any> {
+  sortOrder: number;
+  isThumbnail: any;
   isOld?: boolean;
 }
 
@@ -72,11 +79,11 @@ export default function EditProductPage() {
   const [form] = Form.useForm();
 
   const [product, setProduct] = useState<Product>();
-
+  const [originalData, setOriginalData] = useState<any>(null);
   const [sizes, setSizes] = useState<any[]>([]);
   const [colors, setColors] = useState<any[]>([]);
-  const [tags, setTags] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [tags, setTags] = useState<Tags[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [isSale, setIsSale] = useState(false);
   const [description, setDescription] = useState<string>("");
@@ -90,58 +97,88 @@ export default function EditProductPage() {
   const param = useParams();
   const productId = String(param.id);
 
-  const getAndSetProperties = async () => {
+  const formData = new FormData();
+
+  const getAndSetData = useCallback(async () => {
     try {
-      const [tagsRes, colorsRes, categoriesRes, sizesRes] = await Promise.all([
-        getTagsNoChild(),
-        getColorsNoChild(),
-        getCategoriesNoChild(),
-        getSizesNoChild(),
-      ]);
+      const [tagsRes, colorsRes, categoriesRes, sizesRes, productRes] =
+        await Promise.all([
+          getTagsNoChild(),
+          getColorsNoChild(),
+          getCategoriesNoChild(),
+          getSizesNoChild(),
+          getProductById(productId),
+        ]);
 
-      setTags(tagsRes.data.data.tags);
-      setColors(colorsRes.data.data.colors);
-      setCategories(categoriesRes.data.data.categories);
-      setSizes(sizesRes.data.data.sizes);
-    } catch (error: any) {
-      message.error(error.message);
-    }
-  };
+      const product = productRes.data.data.product;
 
-  const getAndSetProduct = useCallback(async () => {
-    try {
-      const res = await getProductById(productId);
-      const product = res.data.data.product;
-      setProduct(product);
+      const mergedTags = [
+        ...tagsRes.data.data.tags,
+        ...product.tags.filter(
+          (t: Tags) =>
+            !tagsRes.data.data.tags.some((apiT: Tags) => apiT.id === t.id)
+        ),
+      ];
 
-      const uniqueColors = Array.from(
+      const mergedCategories = [
+        ...categoriesRes.data.data.categories,
+        ...product.categories.filter(
+          (c: Category) =>
+            !categoriesRes.data.data.categories.some(
+              (apiC: Category) => apiC.id === c.id
+            )
+        ),
+      ];
+
+      const uniqueColorsFromProduct = Array.from(
         new Map(
           product.variants.map((v: Variants) => [v.color.id, v.color])
         ).values()
       );
-      const uniqueSizes = Array.from(
+      const mergedColors = [
+        ...colorsRes.data.data.colors,
+        ...uniqueColorsFromProduct.filter(
+          (c: any) =>
+            !colorsRes.data.data.colors.some((apiC: any) => apiC.id === c.id)
+        ),
+      ];
+
+      const uniqueSizesFromProduct = Array.from(
         new Map(
           product.variants.map((v: Variants) => [v.size.id, v.size])
         ).values()
       );
+      const mergedSizes = [
+        ...sizesRes.data.data.sizes,
+        ...uniqueSizesFromProduct.filter(
+          (s: any) =>
+            !sizesRes.data.data.sizes.some((apiS: any) => apiS.id === s.id)
+        ),
+      ];
 
-      const tagsData = product.tags;
-      const categoriesData = product.categories;
-
-      setTags(tagsData);
-      setCategories(categoriesData);
-      setColors(uniqueColors);
-      setSizes(uniqueSizes);
+      setTags(mergedTags);
+      setCategories(mergedCategories);
+      setColors(mergedColors);
+      setSizes(mergedSizes);
+      setProduct(product);
       setIsSale(product.is_sale);
       setDescription(product.description);
 
-      const mappedVariants = product.variants.map((v: Variants) => ({
-        id: v.id,
-        sku: v.sku,
-        color: v.color.name,
-        size: v.size.name,
-        quantity: v.inventory?.stock ?? 0,
-      }));
+      const mappedVariants = product.variants.map(
+        (v: Variants, index: number) => ({
+          id: v.id,
+          sku: v.sku,
+          color: v.color.name,
+          size: v.size.name,
+          color_id: v.color.id,
+          size_id: v.size.id,
+          quantity: Number(v.inventory?.quantity ?? 0),
+          stock: Number(v.inventory?.stock ?? 0),
+          sold_quantity: Number(v.inventory?.sold_quantity ?? 0),
+          is_stock: Boolean(v.inventory?.is_stock ?? true),
+          _uniqueKey: `${v.id}_${index}_${Date.now()}`,
+        })
+      );
 
       const imageMap: Record<string, any[]> = {};
       product.images.forEach((img: any, index: number) => {
@@ -149,7 +186,6 @@ export default function EditProductPage() {
           /([0-9a-fA-F\-]{36})_\d+\.(jpg|jpeg|png|webp)$/i
         );
         if (!match) return;
-
         const colorId = match[1];
         const variant = product.variants.find(
           (v: Variants) => v.color.id === colorId
@@ -157,7 +193,6 @@ export default function EditProductPage() {
         if (!variant) return;
 
         const colorName = variant.color.name;
-
         const fileObj = {
           uid: img.id,
           name: `image-${index + 1}`,
@@ -172,14 +207,31 @@ export default function EditProductPage() {
         if (!imageMap[colorName]) {
           imageMap[colorName] = [];
         }
-
         imageMap[colorName].push(fileObj);
       });
 
       setColorImages(imageMap);
 
+      const initialObj = {
+        title: product.title,
+        price: product.price,
+        is_sale: product.is_sale,
+        sale_price:
+          product.sale_price === undefined ? null : product.sale_price,
+        start_sale:
+          product.start_sale === undefined ? null : product.start_sale,
+        end_sale: product.end_sale === undefined ? null : product.end_sale,
+        description: product.description,
+        tag_ids: product.tags.map((t: Tags) => t.id),
+        category_ids: product.categories.map((c: Category) => c.id),
+        variants: mappedVariants,
+        colorImages: imageMap,
+      };
+
+      setOriginalData(initialObj);
+
       setTimeout(() => {
-        form.setFieldsValue({
+        const formValues = {
           title: product.title,
           slug: product.slug,
           description: product.description,
@@ -188,12 +240,18 @@ export default function EditProductPage() {
           sale_price: product?.sale_price,
           start_sale: product?.start_sale ? dayjs(product.start_sale) : null,
           end_sale: product?.end_sale ? dayjs(product.end_sale) : null,
-          tag_ids: tagsData.map((t: Tags) => t.id),
-          category_ids: categoriesData.map((c: Category) => c.id),
-          variants: mappedVariants,
-        });
-      }, 10);
-    } catch (error) {
+          tag_ids: [...product.tags.map((t: Tags) => t.id)],
+          category_ids: [...product.categories.map((c: Category) => c.id)],
+          variants: mappedVariants.map((v: any, index: any) => ({
+            ...v,
+            _index: index,
+          })),
+        };
+
+        console.log("Setting form values:", formValues);
+        form.setFieldsValue(formValues);
+      }, 100);
+    } catch (error: any) {
       message.error("Không thể tải dữ liệu sản phẩm");
       console.error(error);
     } finally {
@@ -202,36 +260,40 @@ export default function EditProductPage() {
   }, [productId, form]);
 
   useEffect(() => {
-    getAndSetProduct();
-    getAndSetProperties();
-  }, []);
+    getAndSetData();
+  }, [getAndSetData]);
 
   const handleColorImageChange = (
     colorName: string,
     info: { fileList: UploadFile[] }
   ) => {
-    setColorImages((prev) => {
+    setColorImages((prev: any) => {
       const prevFiles = prev[colorName] || [];
 
       const deletedOldImages = prevFiles
-        .filter((file) => file.isOld)
+        .filter((file: any) => file.isOld)
         .filter(
-          (file) => !info.fileList.some((newFile) => newFile.uid === file.uid)
+          (file: any) =>
+            !info.fileList.some((newFile) => newFile.uid === file.uid)
         );
 
       setDeletedImageIds((prevIds) => {
         const newIds = deletedOldImages
-          .map((img) => img.uid!)
-          .filter((id) => !prevIds.includes(id));
+          .map((img: any) => img.uid!)
+          .filter((id: any) => !prevIds.includes(id));
 
         return [...prevIds, ...newIds];
       });
 
       const uniqueFiles = Array.from(
         new Map(
-          info.fileList.map((file) => [
+          info.fileList.map((file, index) => [
             file.uid,
-            { ...file, status: file.status || "done" },
+            {
+              ...file,
+              status: file.status || "done",
+              sortOrder: (file as MyUploadFile).sortOrder ?? index + 1,
+            },
           ])
         ).values()
       );
@@ -240,6 +302,21 @@ export default function EditProductPage() {
         ...prev,
         [colorName]: uniqueFiles,
       };
+    });
+  };
+
+  const handleSetThumbnail = (colorName: string, uid: string) => {
+    setColorImages((prev) => {
+      const updated: typeof prev = {};
+
+      Object.keys(prev).forEach((c) => {
+        updated[c] = prev[c].map((file) => ({
+          ...file,
+          isThumbnail: c === colorName && file.uid === uid,
+        }));
+      });
+
+      return updated;
     });
   };
 
@@ -254,8 +331,14 @@ export default function EditProductPage() {
     return selectedColors;
   };
 
+  const normalizeValue = (value: any) => {
+    if (typeof value === "string") {
+      return value.replace(/\r\n/g, "\n");
+    }
+    return value;
+  };
+
   const onFinish = async (values: ProductFormValues) => {
-    console.log("Form values:", values);
     if (
       values.is_sale &&
       (!values.sale_price || !values.start_sale || !values.end_sale)
@@ -263,8 +346,6 @@ export default function EditProductPage() {
       message.warning("Vui lòng điền đầy đủ thông tin khuyến mãi!");
       return;
     }
-
-    const formData = new FormData();
 
     const colorMap = colors.reduce((acc, c) => {
       acc[c.name] = c.id;
@@ -276,104 +357,227 @@ export default function EditProductPage() {
       return acc;
     }, {} as Record<string, string>);
 
-    // Append các field cơ bản
-    formData.append("title", values.title);
-    formData.append("price", String(values.price));
-    formData.append("is_sale", String(values.is_sale));
+    // Khởi tạo FormData
+    const formData = new FormData();
+    let hasChanges = false;
 
-    formData.append("description", description);
-    if (values.sale_price)
-      formData.append("sale_price", String(values.sale_price));
+    // Helper function để thêm vào formData và đánh dấu có thay đổi
+    const appendIfChanged = (key: string, newValue: any, oldValue: any) => {
+      const normalizedNew = normalizeValue(newValue);
+      const normalizedOld = normalizeValue(oldValue);
+
+      if (!isEqual(normalizedNew, normalizedOld)) {
+        if (normalizedNew !== null && normalizedNew !== undefined) {
+          formData.append(key, String(newValue));
+          hasChanges = true;
+        }
+      }
+    };
+
+    // Kiểm tra thay đổi các field cơ bản
+    appendIfChanged("title", values.title, originalData.title);
+    appendIfChanged("price", values.price, originalData.price);
+    appendIfChanged("is_sale", values.is_sale, originalData.is_sale);
+    appendIfChanged("description", description, originalData.description);
+
+    if (values.sale_price) {
+      appendIfChanged("sale_price", values.sale_price, originalData.sale_price);
+    }
     if (values.start_sale) {
-      formData.append("start_sale", toPostgresTimestamp(values.start_sale));
+      appendIfChanged(
+        "start_sale",
+        toPostgresTimestamp(values.start_sale),
+        originalData.start_sale
+      );
     }
-
     if (values.end_sale) {
-      formData.append("end_sale", toPostgresTimestamp(values.end_sale));
+      appendIfChanged(
+        "end_sale",
+        toPostgresTimestamp(values.end_sale),
+        originalData.end_sale
+      );
     }
 
-    values.tag_ids?.forEach((id) => {
-      formData.append("tag_ids", String(id));
-    });
+    // Kiểm tra thay đổi tags
+    if (!isEqual(values.tag_ids, originalData.tag_ids)) {
+      values.tag_ids?.forEach((id) => formData.append("tag_ids", String(id)));
+      hasChanges = true;
+    }
 
-    values.category_ids.forEach((id) =>
-      formData.append("category_ids", String(id))
-    );
+    // Kiểm tra thay đổi categories
+    if (!isEqual(values.category_ids, originalData.category_ids)) {
+      values.category_ids.forEach((id) =>
+        formData.append("category_ids", String(id))
+      );
+      hasChanges = true;
+    }
 
-    deleteVariantIds.forEach((id) => {
-      formData.append("delete_variant_ids", id);
-    });
+    // Thêm variant bị xóa
+    if (deleteVariantIds.length > 0) {
+      deleteVariantIds.forEach((id) => {
+        formData.append("delete_variant_ids", id);
+      });
+      hasChanges = true;
+    }
+
+    // Xử lý variants
+    const normalize = (val: any) => {
+      if (val == null) return "";
+      return String(val).trim();
+    };
+
+    // Cải thiện hàm so sánh variant
+    const isVariantChanged = (newVariant: any, oldVariant: any) => {
+      const newColorId = colorMap[newVariant.color] || newVariant.color_id;
+      const newSizeId = sizeMap[newVariant.size] || newVariant.size_id;
+
+      // Lấy ID từ original data
+      const oldColorId = oldVariant.color_id || colorMap[oldVariant.color];
+      const oldSizeId = oldVariant.size_id || sizeMap[oldVariant.size];
+
+      console.log("Comparing variant:", {
+        newSku: newVariant.sku,
+        oldSku: oldVariant.sku,
+        newQuantity: newVariant.quantity,
+        oldQuantity: oldVariant.quantity,
+        newColorId,
+        oldColorId,
+        newSizeId,
+        oldSizeId,
+      });
+
+      return (
+        normalize(newVariant.sku) !== normalize(oldVariant.sku) ||
+        Number(newVariant.quantity) !== Number(oldVariant.quantity) ||
+        String(newColorId) !== String(oldColorId) ||
+        String(newSizeId) !== String(oldSizeId)
+      );
+    };
 
     let newIndex = 0;
     let updateIndex = 0;
 
-    if (values.variants) {
-      values.variants.forEach((variant) => {
-        const formVariant = {
-          sku: variant.sku,
-          quantity: variant.quantity,
-          color_id: colorMap[variant.color],
-          size_id: sizeMap[variant.size],
-        };
+    // Xử lý từng variant
+    values.variants?.forEach((variant) => {
+      const formVariant = {
+        sku: normalize(variant.sku),
+        quantity: Number(variant.quantity),
+        color_id: colorMap[variant.color] || variant.color_id,
+        size_id: sizeMap[variant.size] || variant.size_id,
+      };
 
-        if (variant.id !== undefined && variant.id !== null) {
-          formData.append(`update_variants[${updateIndex}][id]`, variant.id);
-          formData.append(`update_variants[${updateIndex}][sku]`, variant.sku);
-          formData.append(
-            `update_variants[${updateIndex}][quantity]`,
-            String(variant.quantity)
-          );
-          formData.append(
-            `update_variants[${updateIndex}][color_id]`,
-            formVariant.color_id
-          );
-          formData.append(
-            `update_variants[${updateIndex}][size_id]`,
-            formVariant.size_id
-          );
-          updateIndex++;
-        } else {
-          formData.append(`new_variants[${newIndex}][sku]`, variant.sku);
-          formData.append(
-            `new_variants[${newIndex}][quantity]`,
-            String(variant.quantity)
-          );
-          formData.append(
-            `new_variants[${newIndex}][color_id]`,
-            formVariant.color_id
-          );
-          formData.append(
-            `new_variants[${newIndex}][size_id]`,
-            formVariant.size_id
-          );
-          newIndex++;
+      if (variant.id) {
+        // Variant đã tồn tại - kiểm tra có thay đổi không
+        const originalVariant = originalData.variants.find(
+          (v: any) => v.id === variant.id
+        );
+
+        if (originalVariant) {
+          const changed = isVariantChanged(variant, originalVariant);
+          console.log(`Variant ${variant.id} changed:`, changed);
+
+          if (changed) {
+            formData.append(`update_variants[${updateIndex}][id]`, variant.id);
+            formData.append(
+              `update_variants[${updateIndex}][sku]`,
+              formVariant.sku
+            );
+            formData.append(
+              `update_variants[${updateIndex}][quantity]`,
+              String(formVariant.quantity)
+            );
+            formData.append(
+              `update_variants[${updateIndex}][color_id]`,
+              formVariant.color_id
+            );
+            formData.append(
+              `update_variants[${updateIndex}][size_id]`,
+              formVariant.size_id
+            );
+            updateIndex++;
+            hasChanges = true;
+          }
         }
+      } else {
+        // Variant mới
+        console.log("Adding new variant:", formVariant);
+        formData.append(`new_variants[${newIndex}][sku]`, formVariant.sku);
+        formData.append(
+          `new_variants[${newIndex}][quantity]`,
+          String(formVariant.quantity)
+        );
+        formData.append(
+          `new_variants[${newIndex}][color_id]`,
+          formVariant.color_id
+        );
+        formData.append(
+          `new_variants[${newIndex}][size_id]`,
+          formVariant.size_id
+        );
+        newIndex++;
+        hasChanges = true;
+      }
+    });
+
+    // Xử lý ảnh bị xóa
+    if (deletedImageIds.length > 0) {
+      deletedImageIds.forEach((id) => {
+        formData.append("delete_image_ids", id);
       });
+      hasChanges = true;
     }
 
-    deletedImageIds.forEach((id) => {
-      formData.append("delete_image_ids", id);
+    // Xử lý ảnh (giữ nguyên logic cũ)
+    let imageUpdateIndex = 0;
+    Object.entries(colorImages).forEach(([colorName, fileList]) => {
+      const originalFiles = originalData.colorImages[colorName] || [];
+
+      fileList.forEach((file, idx) => {
+        if (file.isOld && file.uid) {
+          const originalFile = originalFiles.find(
+            (f: any) => f.uid === file.uid
+          );
+          const originalThumb = !!originalFile?.isThumbnail;
+          const currentThumb = !!file.isThumbnail;
+          const originalSort = originalFile?.sortOrder;
+          const currentSort = file.sortOrder ?? idx + 1;
+
+          if (originalThumb !== currentThumb || originalSort !== currentSort) {
+            formData.append(`update_images[${imageUpdateIndex}][id]`, file.uid);
+            formData.append(
+              `update_images[${imageUpdateIndex}][is_thumbnail]`,
+              String(currentThumb)
+            );
+            formData.append(
+              `update_images[${imageUpdateIndex}][sort_order]`,
+              String(currentSort)
+            );
+            imageUpdateIndex++;
+            hasChanges = true;
+          }
+        }
+      });
     });
 
-    values.update_images?.forEach((img: any, index: number) => {
-      formData.append(`update_images[${index}][id]`, img.id);
-      formData.append(
-        `update_images[${index}][is_thumbnail]`,
-        String(img.is_thumbnail)
-      );
-    });
-
+    // Xử lý ảnh mới
     let newImageIndex = 0;
     const usedFiles = new Set();
 
     for (const [colorName, fileList] of Object.entries(colorImages)) {
       const color_id = colorMap[colorName];
+      const originalFiles = originalData.colorImages[colorName] || [];
 
       fileList.forEach((file, idx) => {
         const fileKey = file.uid || file.name;
         if (usedFiles.has(fileKey)) return;
 
-        if (file.originFileObj) {
+        const isNewImage =
+          !file.isOld &&
+          !originalFiles.some(
+            (f: any) => f.name === file.name && f.size === file.size
+          );
+
+        if (isNewImage && file.originFileObj) {
           formData.append(
             `new_images[${newImageIndex}][file]`,
             file.originFileObj
@@ -384,39 +588,36 @@ export default function EditProductPage() {
           );
           formData.append(
             `new_images[${newImageIndex}][is_thumbnail]`,
-            idx === 0 ? "true" : "false"
+            String(!!file.isThumbnail)
           );
           formData.append(
             `new_images[${newImageIndex}][sort_order]`,
             String(idx + 1)
           );
-
           usedFiles.add(fileKey);
           newImageIndex++;
+          hasChanges = true;
         }
       });
     }
 
-    const formDataObj: Record<string, unknown> = {};
-    formData.forEach((value, key) => {
-      if (formDataObj[key]) {
-        if (Array.isArray(formDataObj[key])) {
-          formDataObj[key].push(value);
-        } else {
-          formDataObj[key] = [formDataObj[key], value];
-        }
-      } else {
-        formDataObj[key] = value;
-      }
-    });
+    // Debug: In ra tất cả entries trong FormData
+    console.log("FormData entries:", [...formData.entries()]);
+    console.log("Has changes:", hasChanges);
+
+    // Kiểm tra có thay đổi không
+    if (!hasChanges) {
+      message.info("Không có thay đổi nào để lưu!");
+      return;
+    }
 
     try {
       setIsLoading(true);
       const res = await updateProduct(productId, formData);
       message.success(res.data.message);
       setDeletedImageIds([]);
-      getAndSetProduct();
-      // router.push("/products");
+      setDeleteVariantIds([]);
+      getAndSetData();
     } catch (error: any) {
       message.error(error.message);
     } finally {
@@ -595,99 +796,210 @@ export default function EditProductPage() {
                   <Button
                     type="dashed"
                     icon={<PlusOutlined />}
-                    onClick={() => add()}
+                    onClick={() => {
+                      // Tạo variant mới với unique key
+                      add({
+                        sku: "",
+                        size: undefined,
+                        color: undefined,
+                        quantity: 0,
+                        sold_quantity: 0,
+                        stock: 0,
+                        is_stock: true,
+                        _uniqueKey: `new_${Date.now()}_${Math.random()}`,
+                      });
+                    }}
                   >
                     Thêm thuộc tính
                   </Button>
                 </div>
 
                 <div className="space-y-6">
-                  {fields.map(({ key, name, ...restField }) => (
-                    <div
-                      key={key}
-                      className="relative space-y-4 border p-4 rounded-md"
-                    >
-                      {/* Icon xoá ở góc phải trên */}
-                      <MinusCircleOutlined
-                        onClick={() => {
-                          const variant = form.getFieldValue([
-                            "variants",
-                            name,
-                          ]);
-                          if (variant?.id) {
-                            setDeleteVariantIds((prev) => [
-                              ...prev,
-                              variant.id,
+                  {fields.map(({ key, name, ...restField }) => {
+                    // Lấy variant data để debug
+                    const currentVariant = form.getFieldValue([
+                      "variants",
+                      name,
+                    ]);
+
+                    return (
+                      <div
+                        key={key}
+                        className="relative space-y-4 border p-4 rounded-md"
+                      >
+                        {/* Debug info - có thể xóa sau khi fix */}
+                        <div className="text-xs text-gray-500 mb-2">
+                          Debug: Field Index={name}, Key={key}, ID=
+                          {currentVariant?.id}
+                        </div>
+
+                        {/* Icon xoá ở góc phải trên */}
+                        <MinusCircleOutlined
+                          onClick={() => {
+                            const variant = form.getFieldValue([
+                              "variants",
+                              name,
                             ]);
-                          }
-                          remove(name);
-                        }}
-                        className="absolute top-2 right-2 text-red-500 hover:text-red-700 text-xl cursor-pointer"
-                      />
+                            console.log("Removing variant:", variant);
 
-                      <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 items-center">
-                        <Form.Item
-                          {...restField}
-                          label="SKU"
-                          name={[name, "sku"]}
-                          rules={[{ required: true, message: "Nhập SKU" }]}
-                          className="m-0"
-                        >
-                          <Input size="large" />
-                        </Form.Item>
+                            if (variant?.id) {
+                              setDeleteVariantIds((prev) => {
+                                const newIds = [...prev, variant.id];
+                                console.log("Updated delete list:", newIds);
+                                return newIds;
+                              });
+                            }
+                            remove(name);
+                          }}
+                          className="absolute top-2 right-2 text-red-500 hover:text-red-700 text-xl cursor-pointer"
+                        />
 
-                        <Form.Item
-                          {...restField}
-                          label="Số lượng"
-                          name={[name, "quantity"]}
-                          rules={[{ required: true, message: "Nhập số lượng" }]}
-                          className="m-0"
-                        >
-                          <Input type="number" size="large" />
-                        </Form.Item>
-
-                        <Form.Item
-                          {...restField}
-                          label="Size"
-                          name={[name, "size"]}
-                          rules={[{ required: true, message: "Chọn size" }]}
-                          className="m-0"
-                        >
-                          <Select placeholder="Chọn size" size="large">
-                            {sizes.map((s: Size) => (
-                              <Option key={s.id} value={s.name}>
-                                {s.name}
-                              </Option>
-                            ))}
-                          </Select>
-                        </Form.Item>
-
-                        <Form.Item
-                          {...restField}
-                          label="Màu"
-                          name={[name, "color"]}
-                          rules={[{ required: true, message: "Chọn màu" }]}
-                          className="m-0"
-                        >
-                          <Select
-                            placeholder="Chọn màu"
-                            size="large"
-                            onChange={() => {
-                              setTimeout(() => {
-                                form.validateFields();
-                              }, 100);
-                            }}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 items-center">
+                          <Form.Item
+                            {...restField}
+                            label="SKU"
+                            name={[name, "sku"]}
+                            rules={[{ required: true, message: "Nhập SKU" }]}
+                            className="m-0"
                           >
-                            {colors.map((c: Color) => (
-                              <Option key={c.id} value={c.name}>
-                                {c.name}
-                              </Option>
-                            ))}
-                          </Select>
-                        </Form.Item>
+                            <Input
+                              size="large"
+                              onChange={(e) => {
+                                // Force re-render với unique value
+                                const value = e.target.value;
+                                console.log(
+                                  `SKU changed for variant ${name}:`,
+                                  value
+                                );
+                              }}
+                            />
+                          </Form.Item>
+
+                          <Form.Item
+                            {...restField}
+                            label="Size"
+                            name={[name, "size"]}
+                            rules={[{ required: true, message: "Chọn size" }]}
+                            className="m-0"
+                          >
+                            <Select
+                              placeholder="Chọn size"
+                              size="large"
+                              onChange={(value) => {
+                                console.log(
+                                  `Size changed for variant ${name}:`,
+                                  value
+                                );
+                                // Force form validation
+                                setTimeout(() => {
+                                  form.validateFields([[name, "size"]]);
+                                }, 0);
+                              }}
+                            >
+                              {sizes.map((s: Size) => (
+                                <Option key={s.id} value={s.name}>
+                                  {s.name}
+                                </Option>
+                              ))}
+                            </Select>
+                          </Form.Item>
+
+                          <Form.Item
+                            {...restField}
+                            label="Màu"
+                            name={[name, "color"]}
+                            rules={[{ required: true, message: "Chọn màu" }]}
+                            className="m-0"
+                          >
+                            <Select
+                              placeholder="Chọn màu"
+                              size="large"
+                              onChange={(value) => {
+                                console.log(
+                                  `Color changed for variant ${name}:`,
+                                  value
+                                );
+                                setTimeout(() => {
+                                  form.validateFields([[name, "color"]]);
+                                }, 0);
+                              }}
+                            >
+                              {colors.map((c: Color) => (
+                                <Option key={c.id} value={c.name}>
+                                  {c.name}
+                                </Option>
+                              ))}
+                            </Select>
+                          </Form.Item>
+
+                          <Form.Item
+                            {...restField}
+                            label="Số lượng"
+                            name={[name, "quantity"]}
+                            rules={[
+                              { required: true, message: "Nhập số lượng" },
+                            ]}
+                            className="m-0"
+                          >
+                            <Input
+                              type="number"
+                              size="large"
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                console.log(
+                                  `Quantity changed for variant ${name}:`,
+                                  value
+                                );
+
+                                // Đảm bảo chỉ update field cụ thể
+                                const currentVariants =
+                                  form.getFieldValue("variants") || [];
+                                const updatedVariants = [...currentVariants];
+                                if (updatedVariants[name]) {
+                                  updatedVariants[name] = {
+                                    ...updatedVariants[name],
+                                    quantity: Number(value),
+                                  };
+
+                                  // Log để debug
+                                  console.log(
+                                    "Updated variants array:",
+                                    updatedVariants
+                                  );
+                                }
+                              }}
+                            />
+                          </Form.Item>
+
+                          <Form.Item
+                            {...restField}
+                            label="Đã bán"
+                            name={[name, "sold_quantity"]}
+                            className="m-0"
+                          >
+                            <Input type="number" size="large" disabled />
+                          </Form.Item>
+
+                          <Form.Item
+                            {...restField}
+                            label="Tồn kho"
+                            name={[name, "stock"]}
+                            className="m-0"
+                          >
+                            <Input type="number" size="large" disabled />
+                          </Form.Item>
+
+                          <Form.Item
+                            label="Còn hàng"
+                            name={[name, "is_stock"]}
+                            valuePropName="checked"
+                          >
+                            <Switch disabled />
+                          </Form.Item>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </>
             )}
@@ -717,6 +1029,7 @@ export default function EditProductPage() {
                       colorName={String(colorName)}
                       initialList={colorImages[String(colorName)] || []}
                       handleColorImageChange={handleColorImageChange}
+                      onSetThumbnail={handleSetThumbnail}
                     />
                   ))}
                 </div>

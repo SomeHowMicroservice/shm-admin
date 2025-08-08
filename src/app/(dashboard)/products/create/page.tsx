@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -23,7 +24,7 @@ import {
 import { Category, Color, Size, Tags } from "@/types/product";
 import { Editor } from "@tinymce/tinymce-react";
 import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
-import ColorImageUpload from "./components/UploadImage";
+import ColorImageUpload from "./components/ColorImageUpload";
 import { toPostgresTimestamp } from "@/utils/time";
 
 export interface ProductFormValues {
@@ -96,25 +97,36 @@ export default function CreateProductPage() {
     colorName: string,
     info: { fileList: UploadFile[] }
   ) => {
-    const existingFiles = new Set<string>();
-    const filteredList: UploadFile[] = [];
+    setColorImages((prev: any) => {
+      const uniqueFiles = Array.from(
+        new Map(
+          info.fileList.map((file) => [
+            file.uid,
+            { ...file, status: file.status || "done" },
+          ])
+        ).values()
+      );
 
-    info.fileList.forEach((file, index) => {
-      const fileKey = file.uid || file.name;
-      if (!existingFiles.has(fileKey)) {
-        filteredList.push({
-          ...file,
-          uid: file.uid || `${colorName}-${Date.now()}-${index}`,
-          status: file.status || "done",
-        });
-        existingFiles.add(fileKey);
-      }
+      return {
+        ...prev,
+        [colorName]: uniqueFiles,
+      };
     });
+  };
 
-    setColorImages((prev) => ({
-      ...prev,
-      [colorName]: filteredList,
-    }));
+  const handleSetThumbnail = (colorName: string, uid: string) => {
+    setColorImages((prev) => {
+      const updated: typeof prev = {};
+
+      Object.keys(prev).forEach((c) => {
+        updated[c] = prev[c].map((file) => ({
+          ...file,
+          isThumbnail: c === colorName && file.uid === uid,
+        }));
+      });
+
+      return updated;
+    });
   };
 
   const getSelectedColors = () => {
@@ -515,6 +527,7 @@ export default function CreateProductPage() {
                       colorName={String(colorName)}
                       initialList={colorImages[String(colorName)] || []}
                       handleColorImageChange={handleColorImageChange}
+                      onSetThumbnail={handleSetThumbnail}
                     />
                   ))}
                 </div>
