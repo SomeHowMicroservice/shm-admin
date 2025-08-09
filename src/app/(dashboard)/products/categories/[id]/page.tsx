@@ -15,6 +15,7 @@ import {
 import axiosRequest from "@/config/axios";
 import { ProductModal } from "../components/ProductModal";
 import { Product } from "../components/ProductModal";
+import { updateCategory } from "@/api/product";
 
 const { Option } = Select;
 
@@ -53,6 +54,7 @@ interface IUpdateCategoryData {
 
 const CategoryDetailPage = () => {
   const { id } = useParams();
+  const category_id = id && id.toString();
   const router = useRouter();
   const [form] = Form.useForm();
 
@@ -101,15 +103,21 @@ const CategoryDetailPage = () => {
   const handleUpdate = async (values: IUpdateCategoryData) => {
     setUpdating(true);
     try {
-      await axiosRequest.put(`/admin/categories/${id}`, {
+      if (!category_id) {
+        return;
+      }
+
+      const res = await updateCategory(category_id, {
         name: values.name,
         slug: values.slug,
         parent_ids: values.parent_ids,
       });
-      message.success("Cập nhật danh mục thành công");
+
+      message.success(res.data.message);
       router.refresh();
-    } catch {
-      message.error("Cập nhật thất bại");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      message.error(error.message);
     } finally {
       setUpdating(false);
     }

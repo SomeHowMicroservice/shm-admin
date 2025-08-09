@@ -7,7 +7,7 @@ import SizeDetailModal from "./components/SizeDetailModal";
 import { Size } from "@/types/product";
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import { toast } from "react-toastify";
-import { getSizes, createSize } from "@/api/product";
+import { getSizes, createSize, updateSize } from "@/api/product";
 
 const SizePage = () => {
   const [sizes, setSizes] = useState<Size[]>([]);
@@ -52,10 +52,19 @@ const SizePage = () => {
     }
   };
 
-  const handleUpdate = (updated: Size) => {
-    setSizes((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
-    setSelectedSize(null);
-    toast.success("Cập nhật thành công");
+  const handleUpdate = async (updated: Size) => {
+    try {
+      const res = await updateSize(updated.id, { name: updated.name });
+      setSelectedSize(null);
+      toast.success(res.data.message);
+      fetchSizes();
+    } catch (error) {
+      const errorMessage =
+        typeof error === "object" && error !== null && "message" in error
+          ? (error as { message: string }).message
+          : "Cập nhật màu thất bại";
+      toast.error(errorMessage);
+    }
   };
 
   const handleDelete = (record: Size) => {

@@ -7,7 +7,7 @@ import DetailColorModal from "./components/DetailColorModal";
 import { Size } from "@/types/product";
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import { toast } from "react-toastify";
-import { getColors, createColor } from "@/api/product";
+import { getColors, createColor, updateColor } from "@/api/product";
 
 const SizePage = () => {
   const [sizes, setSizes] = useState<Size[]>([]);
@@ -15,9 +15,9 @@ const SizePage = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
   const [createOpen, setCreateOpen] = useState(false);
-  const [selectedSize, setSelectedSize] = useState<Size | null>(null);
+  const [selectedColor, setSelectedColor] = useState<Size | null>(null);
 
-  const fetchSizes = async () => {
+  const fetchColors = async () => {
     setLoading(true);
     try {
       const res = await getColors();
@@ -34,7 +34,7 @@ const SizePage = () => {
   };
 
   useEffect(() => {
-    fetchSizes();
+    fetchColors();
   }, []);
 
   const handleCreate = async (data: Size) => {
@@ -42,7 +42,7 @@ const SizePage = () => {
       const res = await createColor(data);
       toast.success(res.data.message);
       setCreateOpen(false);
-      fetchSizes();
+      fetchColors();
     } catch (error) {
       const errorMessage =
         typeof error === "object" && error !== null && "message" in error
@@ -52,10 +52,19 @@ const SizePage = () => {
     }
   };
 
-  const handleUpdate = (updated: Size) => {
-    setSizes((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
-    setSelectedSize(null);
-    toast.success("Cập nhật thành công");
+  const handleUpdate = async (updated: Size) => {
+    try {
+      const res = await updateColor(updated.id, { name: updated.name });
+      setSelectedColor(null);
+      toast.success(res.data.message);
+      fetchColors();
+    } catch (error) {
+      const errorMessage =
+        typeof error === "object" && error !== null && "message" in error
+          ? (error as { message: string }).message
+          : "Cập nhật màu thất bại";
+      toast.error(errorMessage);
+    }
   };
 
   const handleDelete = (record: Size) => {
@@ -134,7 +143,7 @@ const SizePage = () => {
         <div className="flex gap-2">
           <Button
             type="link"
-            onClick={() => setSelectedSize(record)}
+            onClick={() => setSelectedColor(record)}
             icon={<EditOutlined />}
           />
           <Button
@@ -175,10 +184,10 @@ const SizePage = () => {
         onCreate={handleCreate}
       />
 
-      {selectedSize && (
+      {selectedColor && (
         <DetailColorModal
-          size={selectedSize}
-          onCancel={() => setSelectedSize(null)}
+          size={selectedColor}
+          onCancel={() => setSelectedColor(null)}
           onUpdate={handleUpdate}
         />
       )}

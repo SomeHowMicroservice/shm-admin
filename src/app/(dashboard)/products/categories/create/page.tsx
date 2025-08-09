@@ -43,7 +43,7 @@ const CreateCategoryPage = () => {
 
       const res = await createCategory(payload);
       toast.success(res.data.message);
-      router.push("/categories");
+      router.push("/products/categories");
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Tạo danh mục thất bại"

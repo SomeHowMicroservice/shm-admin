@@ -86,6 +86,45 @@ export const getCategoriesNoChild = () => {
   return axiosRequest.get("/categories/no-child");
 };
 
+export const deleteProduct = (id: string) => {
+  return axiosRequest.delete(`/admin/products/${id}`);
+};
+
+export const deleteProducts = (ids: string[]) => {
+  return axiosRequest.delete("/admin/products", {
+    data: { ids },
+  });
+};
+
+export const deleteCategory = (id: string) => {
+  return axiosRequest.delete(`/admin/categories/${id}/permanent`);
+};
+
+export const deleteCategories = (ids: string[]) => {
+  return axiosRequest.delete("/admin/categories/permanent", {
+    data: { ids },
+  });
+};
+
+export const updateSize = (id: string, data: { name: string }) => {
+  return axiosRequest.put(`/admin/sizes/${id}`, data);
+};
+
+export const updateTag = (id: string, data: { name: string }) => {
+  return axiosRequest.put(`/admin/tags/${id}`, data);
+};
+
+export const updateColor = (id: string, data: { name: string }) => {
+  return axiosRequest.put(`/admin/colors/${id}`, data);
+};
+
+export const updateCategory = (
+  id: string,
+  data: { name: string; slug?: string; parent_ids?: string[] }
+) => {
+  return axiosRequest.put(`/admin/categories/${id}`, data);
+};
+
 const productAPI = {
   createCategory,
   getCategories,
@@ -97,6 +136,10 @@ const productAPI = {
   getProductColors,
   getProductSizes,
   getProductTags,
+  updateColor,
+  updateTag,
+  updateSize,
+  updateCategory,
 };
 
 export default productAPI;

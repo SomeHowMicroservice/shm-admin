@@ -5,8 +5,7 @@ import { ColumnsType } from "antd/es/table";
 import { useEffect, useState } from "react";
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
-import axiosRequest from "@/config/axios";
-import { getCategories } from "@/api/product";
+import { deleteCategories, deleteCategory, getCategories } from "@/api/product";
 import { toast } from "react-toastify";
 import Link from "antd/es/typography/Link";
 
@@ -42,28 +41,36 @@ const CategoryPage = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      await axiosRequest.delete(`/admin/categories/${id}`);
-      message.success("Đã xóa danh mục");
+      const res = await deleteCategory(id);
+      message.success(res.data.message);
       fetchCategories(pagination.current, pagination.pageSize);
     } catch {
       message.error("Xóa thất bại");
     }
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = async (ids: string[]) => {
     try {
-      await Promise.all(
-        selectedRowKeys.map((id) =>
-          axiosRequest.delete(`/admin/categories/${id}`)
-        )
-      );
-      message.success("Đã xóa các danh mục đã chọn");
+      const res = await deleteCategories(ids);
+      message.success(res.data.message);
       setSelectedRowKeys([]);
       fetchCategories(pagination.current, pagination.pageSize);
-    } catch {
-      message.error("Xóa thất bại");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      message.error(error.message);
     }
   };
+
+  const rowSelection = {
+    selectedRowKeys,
+    onChange: (keys: React.Key[]) => {
+      setSelectedRowKeys(keys);
+    },
+  };
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
 
   const columns: ColumnsType<Category> = [
     {
@@ -92,20 +99,9 @@ const CategoryPage = () => {
     },
   ];
 
-  const rowSelection = {
-    selectedRowKeys,
-    onChange: (keys: React.Key[]) => {
-      setSelectedRowKeys(keys);
-    },
-  };
-
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
   return (
     <div className="p-4">
-      <Space className="mb-4" wrap>
+      <Space className="mb-5">
         <Button
           type="primary"
           icon={<PlusOutlined />}
@@ -113,14 +109,26 @@ const CategoryPage = () => {
         >
           Tạo mới
         </Button>
-        {selectedRowKeys.length > 0 && (
-          <Popconfirm
-            title="Bạn chắc chắn muốn xóa các danh mục đã chọn?"
-            onConfirm={handleBulkDelete}
+
+        <Popconfirm
+          title={`Bạn có chắc muốn xóa ${selectedRowKeys.length} danh mục này?`}
+          onConfirm={() =>
+            handleBulkDelete(selectedRowKeys.map((id) => id.toString()))
+          }
+          okText="Xóa"
+          cancelText="Hủy"
+        >
+          <Button
+            type="primary"
+            danger
+            icon={<DeleteOutlined />}
+            disabled={selectedRowKeys.length === 0}
           >
-            <Button danger>Xóa đã chọn</Button>
-          </Popconfirm>
-        )}
+            {selectedRowKeys.length > 0
+              ? `Xóa ${selectedRowKeys.length} danh mục`
+              : "Xóa"}
+          </Button>
+        </Popconfirm>
       </Space>
 
       <Table

@@ -2,12 +2,12 @@
 
 import { Button, Table, Modal } from "antd";
 import { useEffect, useState } from "react";
-import { Size } from "@/types/product";
+import { Size, Tags } from "@/types/product";
 import TagCreateModal from "./components/CreateTagModal";
 import TagDetailModal from "./components/DetailTagModal";
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import { toast } from "react-toastify";
-import { getTags, createTag } from "@/api/product";
+import { getTags, createTag, updateTag } from "@/api/product";
 
 const SizePage = () => {
   const [sizes, setSizes] = useState<Size[]>([]);
@@ -17,7 +17,7 @@ const SizePage = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedTag, setSelectedTag] = useState<Size | null>(null);
 
-  const fetchSizes = async () => {
+  const fetchTags = async () => {
     setLoading(true);
     try {
       const res = await getTags();
@@ -34,7 +34,7 @@ const SizePage = () => {
   };
 
   useEffect(() => {
-    fetchSizes();
+    fetchTags();
   }, []);
 
   const handleCreate = async (data: Size) => {
@@ -42,7 +42,7 @@ const SizePage = () => {
       const res = await createTag(data);
       toast.success(res.data.message);
       setCreateOpen(false);
-      fetchSizes();
+      fetchTags();
     } catch (error) {
       const errorMessage =
         typeof error === "object" && error !== null && "message" in error
@@ -52,10 +52,19 @@ const SizePage = () => {
     }
   };
 
-  const handleUpdate = (updated: Size) => {
-    setSizes((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
-    setSelectedTag(null);
-    toast.success("Cập nhật thành công");
+  const handleUpdate = async (updated: Tags) => {
+    try {
+      const res = await updateTag(updated.id, { name: updated.name });
+      setSelectedTag(null);
+      toast.success(res.data.message);
+      fetchTags();
+    } catch (error) {
+      const errorMessage =
+        typeof error === "object" && error !== null && "message" in error
+          ? (error as { message: string }).message
+          : "Cập nhật màu thất bại";
+      toast.error(errorMessage);
+    }
   };
 
   const handleDelete = (record: Size) => {

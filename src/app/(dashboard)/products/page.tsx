@@ -1,14 +1,23 @@
-// ProductListPage.tsx
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Popconfirm, Table, Tag, message, Image, Tooltip } from "antd";
+import {
+  Button,
+  Popconfirm,
+  Table,
+  Tag,
+  message,
+  Image,
+  Tooltip,
+  Space,
+} from "antd";
 import { useRouter } from "next/navigation";
 import { getAllProducts } from "@/api/product";
 import { ColumnsType } from "antd/es/table";
 import EditOutlined from "@ant-design/icons/lib/icons/EditOutlined";
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import Link from "antd/es/typography/Link";
+import { deleteProduct, deleteProducts } from "@/api/product";
 
 interface Category {
   id: string;
@@ -32,8 +41,8 @@ interface Product {
 const ProductListPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const router = useRouter();
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -49,13 +58,27 @@ const ProductListPage = () => {
   };
 
   const handleDelete = async (id: string) => {
-    // try {
-    //   await axiosRequest.delete(`/admin/products/${id}`);
-    //   message.success("Xóa sản phẩm thành công");
-    //   fetchProducts();
-    // } catch (error) {
-    //   message.error("Xóa sản phẩm thất bại");
-    // }
+    try {
+      const res = await deleteProduct(id);
+      message.success(res.data.message);
+      setSelectedRowKeys([]);
+      fetchProducts();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      message.error(error.message);
+    }
+  };
+
+  const handleBulkDelete = async (ids: string[]) => {
+    try {
+      const res = await deleteProducts(ids);
+      message.success(res.data.message);
+      setSelectedRowKeys([]);
+      fetchProducts();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      message.error(error.message);
+    }
   };
 
   const rowSelection = {
@@ -125,7 +148,7 @@ const ProductListPage = () => {
       title: "Hành động",
       key: "actions",
       render: (_, record) => (
-        <div className="flex gap-2">
+        <Space>
           <Button
             type="link"
             onClick={() => router.push(`/products/${record.id}`)}
@@ -142,21 +165,44 @@ const ProductListPage = () => {
               <DeleteOutlined size={26} />
             </Button>
           </Popconfirm>
-        </div>
+        </Space>
       ),
     },
   ];
 
   return (
     <div className="p-6 bg-white rounded shadow">
-      <Button
-        type="primary"
-        icon={<PlusOutlined />}
-        onClick={() => router.push("/products/create")}
-        className="mb-5"
-      >
-        Tạo mới
-      </Button>
+      <Space className="mb-5">
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => router.push("/products/create")}
+        >
+          Tạo mới
+        </Button>
+
+        <Popconfirm
+          title={`Bạn có chắc muốn xóa ${selectedRowKeys.length} sản phẩm này?`}
+          onConfirm={() =>
+            handleBulkDelete(selectedRowKeys.map((id) => id.toString()))
+          }
+          okText="Xóa"
+          cancelText="Hủy"
+          disabled={selectedRowKeys.length === 0}
+        >
+          <Button
+            type="primary"
+            danger
+            icon={<DeleteOutlined />}
+            disabled={selectedRowKeys.length === 0}
+          >
+            {selectedRowKeys.length > 0
+              ? `Xóa ${selectedRowKeys.length} sản phẩm`
+              : "Xóa"}
+          </Button>
+        </Popconfirm>
+      </Space>
+
       <Table
         rowKey="id"
         columns={columns}
