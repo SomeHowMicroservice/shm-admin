@@ -86,16 +86,6 @@ export const getCategoriesNoChild = () => {
   return axiosRequest.get("/categories/no-child");
 };
 
-export const deleteProduct = (id: string) => {
-  return axiosRequest.delete(`/admin/products/${id}`);
-};
-
-export const deleteProducts = (ids: string[]) => {
-  return axiosRequest.delete("/admin/products", {
-    data: { ids },
-  });
-};
-
 export const deleteCategory = (id: string) => {
   return axiosRequest.delete(`/admin/categories/${id}/permanent`);
 };
@@ -125,6 +115,150 @@ export const updateCategory = (
   return axiosRequest.put(`/admin/categories/${id}`, data);
 };
 
+export const deleteProductPermanent = (id: string) => {
+  return axiosRequest.delete(`/admin/products/${id}/permanent`);
+};
+
+export const deleteProductsPermanent = (ids: string[]) => {
+  return axiosRequest.delete("/admin/products/permanent", {
+    data: { ids },
+  });
+};
+
+export const deleteProduct = (id: string) => {
+  return axiosRequest.delete(`/admin/products/${id}`);
+};
+
+export const deleteProducts = (ids: string[]) => {
+  return axiosRequest.delete("/admin/products", {
+    data: { ids },
+  });
+};
+
+export const deleteColor = (id: string) => {
+  return axiosRequest.delete(`/admin/colors/${id}`);
+};
+
+export const deleteColors = (ids: string[]) => {
+  return axiosRequest.delete("/admin/colors", {
+    data: { ids },
+  });
+};
+
+export const deleteColorPermanent = (id: string) => {
+  return axiosRequest.delete(`/admin/colors/${id}/permanent`);
+};
+
+export const deleteColorsPermanent = (ids: string[]) => {
+  return axiosRequest.delete("/admin/colors/permanent", {
+    data: { ids },
+  });
+};
+
+export const deleteSize = (id: string) => {
+  return axiosRequest.delete(`/admin/sizes/${id}`);
+};
+
+export const deleteSizes = (ids: string[]) => {
+  return axiosRequest.delete("/admin/sizes", {
+    data: { ids },
+  });
+};
+
+export const deleteSizePermanent = (id: string) => {
+  return axiosRequest.delete(`/admin/sizes/${id}/permanent`);
+};
+
+export const deleteSizesPermanent = (ids: string[]) => {
+  return axiosRequest.delete("/admin/sizes/permanent", {
+    data: { ids },
+  });
+};
+
+export const deleteTag = (id: string) => {
+  return axiosRequest.delete(`/admin/tags/${id}`);
+};
+
+export const deleteTags = (ids: string[]) => {
+  return axiosRequest.delete("/admin/tags", {
+    data: { ids },
+  });
+};
+
+export const deleteTagPermanent = (id: string) => {
+  return axiosRequest.delete(`/admin/tags/${id}/permanent`);
+};
+
+export const deleteTagsPermanent = (ids: string[]) => {
+  return axiosRequest.delete("/admin/tags/permanent", {
+    data: { ids },
+  });
+};
+
+export const getDeletedProduct = () => {
+  return axiosRequest.get("/admin/products/deleted");
+};
+
+export const getDeletedProductDetail = (id: string) => {
+  return axiosRequest.get(`/admin/products/${id}/deleted`);
+};
+
+export const getDeletedSizes = () => {
+  return axiosRequest.get("/admin/sizes/deleted");
+};
+
+export const getDeletedSizesDetail = (id: string) => {
+  return axiosRequest.get(`/admin/sizes/${id}/deleted`);
+};
+
+export const getDeletedColors = () => {
+  return axiosRequest.get("/admin/colors/deleted");
+};
+
+export const getDeletedColorsDetail = (id: string) => {
+  return axiosRequest.get(`/admin/colors/${id}/deleted`);
+};
+
+export const getDeletedTags = () => {
+  return axiosRequest.get("/admin/tags/deleted");
+};
+
+export const getDeletedTagsDetail = (id: string) => {
+  return axiosRequest.get(`/admin/tags/${id}/deleted`);
+};
+
+export const restoreSize = (id: string) => {
+  return axiosRequest.patch(`/admin/sizes/${id}/restore`);
+};
+
+export const restoreSizes = (ids: string[]) => {
+  return axiosRequest.put("/admin/sizes/restore", { ids });
+};
+
+export const restoreColor = (id: string) => {
+  return axiosRequest.patch(`/admin/colors/${id}/restore`);
+};
+
+export const restoreColors = (ids: string[]) => {
+  return axiosRequest.put("/admin/colors/restore", { ids });
+};
+
+export const restoreTag = (id: string) => {
+  return axiosRequest.patch(`/admin/tags/${id}/restore`);
+};
+
+export const restoreTags = (ids: string[]) => {
+  return axiosRequest.put("/admin/tags/restore", { ids });
+};
+
+export const restoreProduct = (id: string) => {
+  return axiosRequest.patch(`/admin/products/${id}/restore`);
+};
+
+export const restoreProducts = (ids: string[]) => {
+  return axiosRequest.put("/admin/products/restore", { ids });
+};
+
 const productAPI = {
   createCategory,
   getCategories,
@@ -140,6 +274,10 @@ const productAPI = {
   updateTag,
   updateSize,
   updateCategory,
+  getDeletedProduct,
+  getDeletedProductDetail,
+  restoreProduct,
+  restoreProducts,
 };
 
 export default productAPI;

@@ -3,7 +3,7 @@
 import { Button, Popconfirm, Space, Table, message } from "antd";
 import { ColumnsType } from "antd/es/table";
 import { useEffect, useState } from "react";
-import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
+import { DeleteOutlined, ExclamationCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import { deleteCategories, deleteCategory, getCategories } from "@/api/product";
 import { toast } from "react-toastify";
@@ -44,8 +44,9 @@ const CategoryPage = () => {
       const res = await deleteCategory(id);
       message.success(res.data.message);
       fetchCategories(pagination.current, pagination.pageSize);
-    } catch {
-      message.error("Xóa thất bại");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      message.error(error);
     }
   };
 
@@ -57,7 +58,7 @@ const CategoryPage = () => {
       fetchCategories(pagination.current, pagination.pageSize);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      message.error(error.message);
+      message.error(error);
     }
   };
 
@@ -92,6 +93,7 @@ const CategoryPage = () => {
         <Popconfirm
           title="Xác nhận xóa danh mục này?"
           onConfirm={() => handleDelete(record.id)}
+          icon={<ExclamationCircleOutlined style={{ color: "red" }} />}
         >
           <Button type="link" danger icon={<DeleteOutlined />} />
         </Popconfirm>

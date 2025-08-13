@@ -1,7 +1,6 @@
 "use client";
 
 import { Modal, Form, Input } from "antd";
-import { useEffect } from "react";
 import { Tags } from "@/types/product";
 
 interface ITagCreateModalProps {

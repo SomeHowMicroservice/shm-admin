@@ -1,15 +1,30 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { Button, Table, Modal } from "antd";
+import { Button, Table, Modal, message, Popconfirm, Space } from "antd";
 import { useEffect, useState } from "react";
 import SizeCreateModal from "./components/SizeCreateModal";
 import SizeDetailModal from "./components/SizeDetailModal";
 import { Size } from "@/types/product";
-import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
+import {
+  DeleteOutlined,
+  EditOutlined,
+  PlusOutlined,
+  RestOutlined,
+} from "@ant-design/icons";
 import { toast } from "react-toastify";
-import { getSizes, createSize, updateSize } from "@/api/product";
+import {
+  getSizes,
+  createSize,
+  updateSize,
+  deleteSizes,
+  deleteSize,
+} from "@/api/product";
+import { useRouter } from "next/navigation";
 
 const SizePage = () => {
+  const router = useRouter();
+
   const [sizes, setSizes] = useState<Size[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
@@ -67,26 +82,14 @@ const SizePage = () => {
     }
   };
 
-  const handleDelete = (record: Size) => {
-    Modal.confirm({
-      title: "Xác nhận xoá",
-      content: `Bạn có chắc chắn muốn xoá size "${record.name}" không?`,
-      okText: "Xoá",
-      okType: "danger",
-      cancelText: "Hủy",
-      onOk: async () => {
-        try {
-          setSizes((prev) => prev.filter((s) => s.id !== record.id));
-          toast.success("Xoá thành công");
-        } catch (error) {
-          const errorMessage =
-            typeof error === "object" && error !== null && "message" in error
-              ? (error as { message: string }).message
-              : "Tạo size thất bại";
-          toast.error(errorMessage);
-        }
-      },
-    });
+  const handleDelete = async (id: string) => {
+    try {
+      const res = await deleteSize(id);
+      message.success(res.data.message);
+      fetchSizes();
+    } catch (error: any) {
+      message.error(error);
+    }
   };
 
   const rowSelection = {
@@ -94,6 +97,18 @@ const SizePage = () => {
     onChange: (keys: React.Key[]) => {
       setSelectedRowKeys(keys);
     },
+  };
+
+  const handleBulkDelete = async (ids: string[]) => {
+    try {
+      const res = await deleteSizes(ids);
+      message.success(res.data.message);
+      setSelectedRowKeys([]);
+      fetchSizes();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      message.error(error);
+    }
   };
 
   const columns = [
@@ -146,12 +161,19 @@ const SizePage = () => {
             onClick={() => setSelectedSize(record)}
             icon={<EditOutlined />}
           />
-          <Button
-            type="link"
-            onClick={() => handleDelete(record)}
-            icon={<DeleteOutlined />}
-            danger
-          />
+          <Popconfirm
+            title="Xác nhận xóa?"
+            description="Bạn có chắc muốn xóa mục này không?"
+            okText="Xóa"
+            cancelText="Hủy"
+            okButtonProps={{ danger: true }}
+            onConfirm={() => handleDelete(record.id)}
+          >
+            <Button
+              icon={<DeleteOutlined style={{ color: "red" }} />}
+              style={{ border: "none", boxShadow: "none" }}
+            />
+          </Popconfirm>
         </div>
       ),
     },
@@ -159,13 +181,42 @@ const SizePage = () => {
 
   return (
     <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between mb-5">
+        <Space>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => setCreateOpen(true)}
+          >
+            Tạo mới
+          </Button>
+          <Popconfirm
+            title={`Bạn có chắc muốn xóa ${selectedRowKeys.length} sizes?`}
+            onConfirm={() =>
+              handleBulkDelete(selectedRowKeys.map((id) => id.toString()))
+            }
+            okText="Xóa"
+            cancelText="Hủy"
+            disabled={selectedRowKeys.length === 0}
+          >
+            <Button
+              type="primary"
+              danger
+              icon={<DeleteOutlined />}
+              disabled={selectedRowKeys.length === 0}
+            >
+              {selectedRowKeys.length > 0
+                ? `Xóa ${selectedRowKeys.length} size`
+                : "Xóa"}
+            </Button>
+          </Popconfirm>
+        </Space>
         <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => setCreateOpen(true)}
+          type="default"
+          icon={<RestOutlined style={{ color: "red" }} />}
+          onClick={() => router.push("/products/sizes/deleted")}
         >
-          Tạo mới
+          Sizes đã xóa
         </Button>
       </div>
 
@@ -174,7 +225,6 @@ const SizePage = () => {
         columns={columns}
         rowKey="id"
         loading={loading}
-        pagination={{ pageSize: 5 }}
         rowSelection={rowSelection}
       />
 

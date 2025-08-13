@@ -14,7 +14,7 @@ import {
   horizontalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Upload, Image, UploadFile, Tooltip, Button, message } from "antd";
+import { Upload, Image, UploadFile, Tooltip, Button } from "antd";
 import { PlusOutlined, StarOutlined } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
@@ -73,16 +73,18 @@ const SortableItem = ({
 const ColorImageUpload = ({
   colorName,
   initialList,
+  isDeletedProduct,
   handleColorImageChange,
   onSetThumbnail,
 }: {
-  colorName: string;
-  initialList: CustomUploadFile[];
-  handleColorImageChange: (
+  colorName?: string;
+  initialList?: CustomUploadFile[];
+  isDeletedProduct?: boolean;
+  handleColorImageChange?: (
     color: string,
     info: { fileList: CustomUploadFile[] }
   ) => void;
-  onSetThumbnail: (colorName: string, uid: string) => void;
+  onSetThumbnail?: (colorName: string, uid: string) => void;
 }) => {
   // sync với prop initialList khi parent thay đổi
   const sortByOrder = (list: CustomUploadFile[] = []) =>
@@ -136,7 +138,8 @@ const ColorImageUpload = ({
     }));
 
     setFileList(merged);
-    handleColorImageChange(colorName, { fileList: merged });
+    if (handleColorImageChange && colorName)
+      handleColorImageChange(colorName, { fileList: merged });
   };
 
   const handlePreview = async (file: UploadFile) => {
@@ -152,7 +155,8 @@ const ColorImageUpload = ({
       .filter((f) => f.uid !== file.uid)
       .map((f, i) => ({ ...(f as CustomUploadFile), sortOrder: i + 1 }));
     setFileList(newList);
-    handleColorImageChange(colorName, { fileList: newList });
+    if (handleColorImageChange && colorName)
+      handleColorImageChange(colorName, { fileList: newList });
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -166,7 +170,8 @@ const ColorImageUpload = ({
         sortOrder: i + 1,
       }));
       setFileList(newList);
-      handleColorImageChange(colorName, { fileList: newList });
+      if (handleColorImageChange && colorName)
+        handleColorImageChange(colorName, { fileList: newList });
     }
   };
 
@@ -189,6 +194,7 @@ const ColorImageUpload = ({
         <SortableContext
           items={fileList.map((f) => String(f.uid))}
           strategy={horizontalListSortingStrategy}
+          disabled={isDeletedProduct}
         >
           <Upload
             listType="picture-card"
@@ -202,6 +208,7 @@ const ColorImageUpload = ({
               showRemoveIcon: true,
               showDownloadIcon: false,
             }}
+            disabled={isDeletedProduct}
             iconRender={(file) =>
               (file as CustomUploadFile).isThumbnail ? (
                 <Tooltip title="Thumbnail" className="absolute">
@@ -216,6 +223,7 @@ const ColorImageUpload = ({
                   <Button
                     icon={<StarOutlined />}
                     size="small"
+                    disabled={isDeletedProduct}
                     shape="circle"
                     style={{
                       position: "absolute",
@@ -231,13 +239,20 @@ const ColorImageUpload = ({
                       border: "none",
                       boxShadow: "0 0 2px rgba(0,0,0,0.2)",
                     }}
-                    onClick={() => onSetThumbnail(colorName, String(file.uid))}
+                    onClick={() =>
+                      onSetThumbnail &&
+                      onSetThumbnail(colorName!, String(file.uid))
+                    }
                   />
                 </div>
               </SortableItem>
             )}
           >
-            {fileList.length >= 8 ? null : uploadButton}
+            {fileList.length >= 15
+              ? null
+              : isDeletedProduct
+              ? null
+              : uploadButton}
           </Upload>
         </SortableContext>
       </DndContext>

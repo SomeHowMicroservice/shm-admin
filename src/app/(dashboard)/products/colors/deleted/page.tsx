@@ -1,41 +1,36 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { Button, Table, Modal, Space, Popconfirm, message } from "antd";
+import { Button, Table, Modal, message, Popconfirm, Space } from "antd";
 import { useEffect, useState } from "react";
-import { Size, Tags } from "@/types/product";
-import TagCreateModal from "./components/CreateTagModal";
-import TagDetailModal from "./components/DetailTagModal";
+import { Color, Size } from "@/types/product";
 import {
+  BackwardOutlined,
   DeleteOutlined,
-  EditOutlined,
   PlusOutlined,
-  RestOutlined,
+  RollbackOutlined,
 } from "@ant-design/icons";
 import { toast } from "react-toastify";
 import {
-  getTags,
-  createTag,
-  updateTag,
-  deleteTags,
-  deleteTag,
+  deleteColorPermanent,
+  deleteColorsPermanent,
+  getDeletedColors,
+  restoreColor,
+  restoreColors,
 } from "@/api/product";
 import { useRouter } from "next/navigation";
 
-const TagPage = () => {
+const SizePage = () => {
   const router = useRouter();
   const [sizes, setSizes] = useState<Size[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
-  const [createOpen, setCreateOpen] = useState(false);
-  const [selectedTag, setSelectedTag] = useState<Size | null>(null);
-
-  const fetchTags = async () => {
+  const fetchDeletedColors = async () => {
     setLoading(true);
     try {
-      const res = await getTags();
-      setSizes(res.data.data.tags);
+      const res = await getDeletedColors();
+      setSizes(res.data.data.colors);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       message.error(error);
     } finally {
@@ -44,42 +39,51 @@ const TagPage = () => {
   };
 
   useEffect(() => {
-    fetchTags();
+    fetchDeletedColors();
   }, []);
 
-  const handleCreate = async (data: Size) => {
+  const handleRestore = async (id: string) => {
     try {
-      const res = await createTag(data);
-      toast.success(res.data.message);
-      setCreateOpen(false);
-      fetchTags();
+      const res = await restoreColor(id);
+      fetchDeletedColors();
+      message.success(res.data.message);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       message.error(error);
     }
   };
 
-  const handleUpdate = async (updated: Tags) => {
+  const handleBulkRestore = async () => {
     try {
-      const res = await updateTag(updated.id, { name: updated.name });
-      setSelectedTag(null);
+      const res = await restoreColors(selectedRowKeys as string[]);
+      setSelectedRowKeys([]);
+      fetchDeletedColors();
       toast.success(res.data.message);
-      fetchTags();
-    } catch (error) {
-      const errorMessage =
-        typeof error === "object" && error !== null && "message" in error
-          ? (error as { message: string }).message
-          : "Cập nhật màu thất bại";
-      toast.error(errorMessage);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      toast.error(error);
     }
   };
 
   const handleDelete = async (id: string) => {
     try {
-      const res = await deleteTag(id);
+      const res = await deleteColorPermanent(id);
       message.success(res.data.message);
-      fetchTags();
+      setSelectedRowKeys([]);
+      fetchDeletedColors();
     } catch (error: any) {
-      message.error(error);
+      message.error(error || "Lỗi khi xóa vĩnh viễn");
+    }
+  };
+
+  const handleBulkDelete = async (ids: string[]) => {
+    try {
+      const res = await deleteColorsPermanent(ids);
+      message.success(res.data.message);
+      setSelectedRowKeys([]);
+      fetchDeletedColors();
+    } catch (error: any) {
+      message.error(error || "Lỗi khi xóa vĩnh viễn hàng loạt");
     }
   };
 
@@ -90,20 +94,9 @@ const TagPage = () => {
     },
   };
 
-  const handleBulkDelete = async (ids: string[]) => {
-    try {
-      const res = await deleteTags(ids);
-      message.success(res.data.message);
-      setSelectedRowKeys([]);
-      fetchTags();
-    } catch (error: any) {
-      message.error(error);
-    }
-  };
-
   const columns = [
     {
-      title: "Tên Tag",
+      title: "Màu",
       dataIndex: "name",
     },
     {
@@ -145,26 +138,19 @@ const TagPage = () => {
     {
       title: "Thao tác",
       render: (_: unknown, record: Size) => (
-        <div className="flex gap-2">
+        <Space>
           <Button
             type="link"
-            onClick={() => setSelectedTag(record)}
-            icon={<EditOutlined />}
+            icon={<RollbackOutlined style={{ color: "blue" }} />}
+            onClick={() => handleRestore(record.id)}
           />
-          <Popconfirm
-            title="Xác nhận xóa?"
-            description="Bạn có chắc muốn xóa mục này không?"
-            okText="Xóa"
-            cancelText="Hủy"
-            okButtonProps={{ danger: true }}
-            onConfirm={() => handleDelete(record.id)}
-          >
-            <Button
-              icon={<DeleteOutlined style={{ color: "red" }} />}
-              style={{ border: "none", boxShadow: "none" }}
-            />
-          </Popconfirm>
-        </div>
+          <Button
+            type="link"
+            icon={<DeleteOutlined />}
+            danger
+            onClick={() => handleDelete(record.id)}
+          />
+        </Space>
       ),
     },
   ];
@@ -174,14 +160,17 @@ const TagPage = () => {
       <div className="flex justify-between items-center mb-4">
         <Space>
           <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => setCreateOpen(true)}
+            type="dashed"
+            icon={<BackwardOutlined />}
+            onClick={() => {
+              router.push("/products/colors");
+            }}
           >
-            Tạo mới
+            Quay lại
           </Button>
+
           <Popconfirm
-            title={`Bạn có chắc muốn xóa ${selectedRowKeys.length} tags?`}
+            title={`Bạn có chắc muốn xóa ${selectedRowKeys.length} sản phẩm?`}
             onConfirm={() =>
               handleBulkDelete(selectedRowKeys.map((id) => id.toString()))
             }
@@ -196,18 +185,27 @@ const TagPage = () => {
               disabled={selectedRowKeys.length === 0}
             >
               {selectedRowKeys.length > 0
-                ? `Xóa ${selectedRowKeys.length} tags`
+                ? `Xóa ${selectedRowKeys.length} màu`
                 : "Xóa"}
             </Button>
           </Popconfirm>
+
+          <Popconfirm
+            title={`Khôi phục ${selectedRowKeys.length} màu đã chọn?`}
+            onConfirm={handleBulkRestore}
+            okText="Khôi phục"
+            cancelText="Hủy"
+            disabled={selectedRowKeys.length === 0}
+          >
+            <Button
+              type="primary"
+              icon={<RollbackOutlined />}
+              disabled={selectedRowKeys.length === 0}
+            >
+              Khôi phục nhiều
+            </Button>
+          </Popconfirm>
         </Space>
-        <Button
-          type="default"
-          icon={<RestOutlined style={{ color: "red" }} />}
-          onClick={() => router.push("/products/tags/deleted")}
-        >
-          Tags đã xóa
-        </Button>
       </div>
 
       <Table
@@ -218,22 +216,8 @@ const TagPage = () => {
         pagination={{ pageSize: 5 }}
         rowSelection={rowSelection}
       />
-
-      <TagCreateModal
-        open={createOpen}
-        onCancel={() => setCreateOpen(false)}
-        onCreate={handleCreate}
-      />
-
-      {selectedTag && (
-        <TagDetailModal
-          tag={selectedTag}
-          onCancel={() => setSelectedTag(null)}
-          onUpdate={handleUpdate}
-        />
-      )}
     </div>
   );
 };
 
-export default TagPage;
+export default SizePage;

@@ -11,11 +11,13 @@ import {
   Form,
   Input,
   Select,
+  Popconfirm,
 } from "antd";
 import axiosRequest from "@/config/axios";
 import { ProductModal } from "../components/ProductModal";
 import { Product } from "../components/ProductModal";
-import { updateCategory } from "@/api/product";
+import { deleteCategory, updateCategory } from "@/api/product";
+import { ExclamationCircleOutlined } from "@ant-design/icons";
 
 const { Option } = Select;
 
@@ -85,7 +87,7 @@ const CategoryDetailPage = () => {
     };
 
     fetchCategory();
-  }, [form, id]);
+  }, [id]);
 
   useEffect(() => {
     const fetchAllCategories = async () => {
@@ -123,11 +125,24 @@ const CategoryDetailPage = () => {
     }
   };
 
+  const handleDelete = async () => {
+    try {
+      if (id) {
+        const res = await deleteCategory(id.toString());
+        message.success(res.data.message);
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      message.error(error);
+    }
+  };
+
   return (
     <div className="p-4 max-w-2xl mx-auto">
       <Button
         onClick={() => router.push("/products/categories")}
         style={{ marginBottom: 16 }}
+        className="mr-10"
       >
         ← Quay lại
       </Button>
@@ -203,21 +218,28 @@ const CategoryDetailPage = () => {
 
               <Descriptions.Item label=" " span={1}>
                 <Form.Item noStyle>
-                  <Button
-                    type="primary"
-                    htmlType="submit"
-                    loading={updating}
-                    className="mt-2"
-                  >
-                    Cập nhật
-                  </Button>
+                  <div className="flex gap-2 mt-2">
+                    <Button type="primary" htmlType="submit" loading={updating}>
+                      Cập nhật
+                    </Button>
 
-                  <Button
-                    onClick={() => setProductModalOpen(true)}
-                    className="mt-2 pl-4"
-                  >
-                    Xem sản phẩm
-                  </Button>
+                    <Button onClick={() => setProductModalOpen(true)}>
+                      Xem sản phẩm
+                    </Button>
+
+                    <Popconfirm
+                      title="Bạn có chắc muốn xóa sản phẩm này VĨNH VIỄN?"
+                      icon={
+                        <ExclamationCircleOutlined style={{ color: "red" }} />
+                      }
+                      okText="Xóa"
+                      cancelText="Hủy"
+                      okButtonProps={{ danger: true }}
+                      onConfirm={handleDelete}
+                    >
+                      <Button danger>Xóa</Button>
+                    </Popconfirm>
+                  </div>
                 </Form.Item>
               </Descriptions.Item>
             </Descriptions>

@@ -1,54 +1,37 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  Button,
-  Popconfirm,
-  Table,
-  Tag,
-  message,
-  Image,
-  Tooltip,
-  Space,
-} from "antd";
-import { useRouter } from "next/navigation";
-import { getAllProducts } from "@/api/product";
-import { ColumnsType } from "antd/es/table";
-import EditOutlined from "@ant-design/icons/lib/icons/EditOutlined";
-import { DeleteOutlined, PlusOutlined, RestOutlined } from "@ant-design/icons";
+  deleteProductPermanent,
+  deleteProductsPermanent,
+  getDeletedProduct,
+  restoreProduct,
+  restoreProducts,
+} from "@/api/product";
+import { Button, message, Popconfirm, Space, Tag, Tooltip } from "antd";
+import { Category, Product } from "@/types/product";
 import Link from "antd/es/typography/Link";
-import { deleteProduct, deleteProducts } from "@/api/product";
+import { Image } from "antd";
+import Table, { ColumnsType } from "antd/es/table";
+import {
+  BackwardOutlined,
+  DeleteOutlined,
+  RollbackOutlined,
+} from "@ant-design/icons";
+import { useRouter } from "next/navigation";
 
-interface Category {
-  id: string;
-  name: string;
-  slug: string;
-}
-
-interface Thumbnail {
-  id: string;
-  url: string;
-}
-
-interface Product {
-  id: string;
-  title: string;
-  price: number;
-  categories: Category[];
-  thumbnail: Thumbnail;
-}
-
-const ProductListPage = () => {
+export default function DeletedProduct() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-  const router = useRouter();
+  const [loading, setLoading] = useState<boolean>(false);
 
-  const fetchProducts = async () => {
-    setLoading(true);
+  const fetchDeletedProduct = async () => {
     try {
-      const res = await getAllProducts();
-      setProducts(res.data.data.products || []);
+      setLoading(true);
+      const res = await getDeletedProduct();
+      const productList = res?.data?.data?.products;
+      setProducts(Array.isArray(productList) ? productList : []);
+      message.success(res.data.message);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       message.error(error);
@@ -58,15 +41,48 @@ const ProductListPage = () => {
   };
 
   useEffect(() => {
-    fetchProducts();
+    fetchDeletedProduct();
   }, []);
+
+  const router = useRouter();
+
+  const rowSelection = {
+    selectedRowKeys,
+    onChange: (keys: React.Key[]) => {
+      setSelectedRowKeys(keys);
+    },
+  };
+
+  const handleRestore = async (id: string) => {
+    try {
+      const res = await restoreProduct(id);
+      message.success(res.data.message);
+      setSelectedRowKeys([]);
+      fetchDeletedProduct();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      message.error(error);
+    }
+  };
+
+  const handleBulkRestore = async (ids: string[]) => {
+    try {
+      const res = await restoreProducts(ids);
+      message.success(res.data.message);
+      setSelectedRowKeys([]);
+      fetchDeletedProduct();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      message.error(error.message);
+    }
+  };
 
   const handleDelete = async (id: string) => {
     try {
-      const res = await deleteProduct(id);
+      const res = await deleteProductPermanent(id);
       message.success(res.data.message);
       setSelectedRowKeys([]);
-      fetchProducts();
+      fetchDeletedProduct();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       message.error(error);
@@ -75,21 +91,14 @@ const ProductListPage = () => {
 
   const handleBulkDelete = async (ids: string[]) => {
     try {
-      const res = await deleteProducts(ids);
+      const res = await deleteProductsPermanent(ids);
       message.success(res.data.message);
       setSelectedRowKeys([]);
-      fetchProducts();
+      fetchDeletedProduct();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       message.error(error);
     }
-  };
-
-  const rowSelection = {
-    selectedRowKeys,
-    onChange: (keys: React.Key[]) => {
-      setSelectedRowKeys(keys);
-    },
   };
 
   const columns: ColumnsType<Product> = [
@@ -115,7 +124,7 @@ const ProductListPage = () => {
       render: (title: string, record) => (
         <Tooltip title={title} className="cursor-pointer">
           <Link
-            href={`/products/${record.id}`}
+            href={`/products/${record.id}/deleted`}
             className="max-w-[200px] overflow-hidden whitespace-nowrap text-ellipsis hover:underline"
           >
             {title}
@@ -150,11 +159,11 @@ const ProductListPage = () => {
       render: (_, record) => (
         <Space>
           <Button
-            type="link"
-            onClick={() => router.push(`/products/${record.id}`)}
-          >
-            <EditOutlined />
-          </Button>
+            icon={<RollbackOutlined style={{ color: "blue" }} />}
+            style={{ border: "none", boxShadow: "none" }}
+            onClick={() => handleRestore(record.id)}
+          />
+
           <Popconfirm
             title="Bạn có chắc muốn xóa sản phẩm này?"
             onConfirm={() => handleDelete(record.id)}
@@ -162,7 +171,7 @@ const ProductListPage = () => {
             cancelText="Hủy"
           >
             <Button type="link" danger>
-              <DeleteOutlined size={26} />
+              <DeleteOutlined style={{ fontSize: 18 }} />
             </Button>
           </Popconfirm>
         </Space>
@@ -175,15 +184,15 @@ const ProductListPage = () => {
       <div className="flex justify-between mb-5">
         <Space>
           <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => router.push("/products/create")}
+            type="dashed"
+            icon={<BackwardOutlined />}
+            onClick={() => router.push("/products")}
           >
-            Tạo mới
+            Quay lại
           </Button>
 
           <Popconfirm
-            title={`Bạn có chắc muốn xóa ${selectedRowKeys.length} sản phẩm này?`}
+            title={`Bạn có chắc muốn xóa ${selectedRowKeys.length} sản phẩm`}
             onConfirm={() =>
               handleBulkDelete(selectedRowKeys.map((id) => id.toString()))
             }
@@ -202,15 +211,27 @@ const ProductListPage = () => {
                 : "Xóa"}
             </Button>
           </Popconfirm>
-        </Space>
 
-        <Button
-          type="default"
-          icon={<RestOutlined style={{ color: "red" }} />}
-          onClick={() => router.push("/products/deleted")}
-        >
-          Sản phẩm đã xóa
-        </Button>
+          <Popconfirm
+            title={`Bạn có chắc muốn khôi phục ${selectedRowKeys.length} sản phẩm này?`}
+            onConfirm={() =>
+              handleBulkRestore(selectedRowKeys.map((id) => id.toString()))
+            }
+            okText="Khôi phục"
+            cancelText="Hủy"
+            disabled={selectedRowKeys.length === 0}
+          >
+            <Button
+              type="primary"
+              icon={<RollbackOutlined />}
+              disabled={selectedRowKeys.length === 0}
+            >
+              {selectedRowKeys.length > 0
+                ? `Khôi phục ${selectedRowKeys.length} sản phẩm`
+                : "Khôi phục"}
+            </Button>
+          </Popconfirm>
+        </Space>
       </div>
 
       <Table
@@ -223,6 +244,4 @@ const ProductListPage = () => {
       />
     </div>
   );
-};
-
-export default ProductListPage;
+}

@@ -13,6 +13,7 @@ import {
   Spin,
   UploadFile,
   Descriptions,
+  Flex,
 } from "antd";
 import { getCategoriesNoChild, updateProduct } from "@/api/product";
 import {
@@ -36,6 +37,8 @@ import {
   getSizesNoChild,
 } from "@/api/product";
 import isEqual from "lodash/isEqual";
+import { ArrowLeftOutlined } from "@ant-design/icons";
+import { useRouter } from "next/navigation";
 
 export interface ProductFormValues {
   update_images: any;
@@ -45,6 +48,7 @@ export interface ProductFormValues {
   description?: string;
   price: number;
   is_sale: boolean;
+  is_active: boolean;
   sale_price?: number;
   start_sale?: string;
   end_sale?: string;
@@ -93,11 +97,15 @@ export default function EditProductPage() {
     Record<string, MyUploadFile[]>
   >({});
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isActive, setIsActive] = useState<boolean>(true);
 
   const param = useParams();
   const productId = String(param.id);
+  const router = useRouter();
 
-  const formData = new FormData();
+  const handleBack = () => {
+    router.push("/products");
+  };
 
   const getAndSetData = useCallback(async () => {
     try {
@@ -162,6 +170,7 @@ export default function EditProductPage() {
       setSizes(mergedSizes);
       setProduct(product);
       setIsSale(product.is_sale);
+      setIsActive(product.is_active);
       setDescription(product.description);
 
       const mappedVariants = product.variants.map(
@@ -216,6 +225,7 @@ export default function EditProductPage() {
         title: product.title,
         price: product.price,
         is_sale: product.is_sale,
+        is_active: product.is_active,
         sale_price:
           product.sale_price === undefined ? null : product.sale_price,
         start_sale:
@@ -237,6 +247,7 @@ export default function EditProductPage() {
           description: product.description,
           price: product.price,
           is_sale: product?.is_sale,
+          is_active: product?.is_active,
           sale_price: product?.sale_price,
           start_sale: product?.start_sale ? dayjs(product.start_sale) : null,
           end_sale: product?.end_sale ? dayjs(product.end_sale) : null,
@@ -378,6 +389,7 @@ export default function EditProductPage() {
     appendIfChanged("title", values.title, originalData.title);
     appendIfChanged("price", values.price, originalData.price);
     appendIfChanged("is_sale", values.is_sale, originalData.is_sale);
+    appendIfChanged("is_active", values.is_active, originalData.is_active);
     appendIfChanged("description", description, originalData.description);
 
     if (values.sale_price) {
@@ -639,13 +651,23 @@ export default function EditProductPage() {
 
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white rounded shadow">
-      <h1 className="text-2xl font-bold mb-6 text-black">Chi tiết sản phẩm</h1>
+      <Flex align="center" justify="space-between" className="mb-6">
+        <h1 className="text-2xl font-bold text-black">Chi tiết sản phẩm</h1>
+
+        <Button
+          type="primary"
+          icon={<ArrowLeftOutlined />}
+          onClick={handleBack}
+        >
+          Quay lại
+        </Button>
+      </Flex>
 
       <Form
         form={form}
         layout="vertical"
         onFinish={onFinish}
-        initialValues={{ is_sale: false, category_ids: [] }}
+        initialValues={{ is_sale: false, is_active: true, category_ids: [] }}
         className="space-y-4"
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -693,6 +715,10 @@ export default function EditProductPage() {
 
           <Form.Item label="Khuyến mãi" name="is_sale" valuePropName="checked">
             <Switch onChange={(val) => setIsSale(val)} />
+          </Form.Item>
+
+          <Form.Item label="Mở bán" name="is_active" valuePropName="checked">
+            <Switch onChange={(val) => setIsActive(val)} />
           </Form.Item>
         </div>
 

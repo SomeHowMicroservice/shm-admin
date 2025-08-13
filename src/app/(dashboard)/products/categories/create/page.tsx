@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Form, Input, Select, Spin } from "antd";
+import { Button, Form, Input, message, Select, Spin } from "antd";
 import { useRouter } from "next/navigation";
 import { createCategory, getCategories } from "@/api/product";
 import { ICreateCategoryData } from "@/types/product";
@@ -42,12 +42,11 @@ const CreateCategoryPage = () => {
       const payload = parent_ids?.length ? { ...rest, parent_ids } : rest;
 
       const res = await createCategory(payload);
-      toast.success(res.data.message);
+      message.success(res.data.message);
       router.push("/products/categories");
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Tạo danh mục thất bại"
-      );
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      message.error(error);
     }
   };
 

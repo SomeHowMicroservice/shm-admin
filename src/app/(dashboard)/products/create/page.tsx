@@ -34,6 +34,7 @@ export interface ProductFormValues {
   description?: string;
   price: number;
   is_sale: boolean;
+  is_active: boolean;
   sale_price?: number;
   start_sale?: string;
   end_sale?: string;
@@ -65,6 +66,8 @@ export default function CreateProductPage() {
   const [isSale, setIsSale] = useState(false);
   const [description, setDescription] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isActive, setIsActive] = useState<boolean>(true);
+  const [productId, setProductId] = useState<string>();
 
   const [colorImages, setColorImages] = useState<Record<string, UploadFile[]>>(
     {}
@@ -165,6 +168,7 @@ export default function CreateProductPage() {
     formData.append("title", values.title);
     formData.append("price", String(values.price));
     formData.append("is_sale", String(values.is_sale));
+    formData.append("is_active", String(values.is_active));
 
     formData.append("description", description);
     if (values.sale_price)
@@ -245,11 +249,8 @@ export default function CreateProductPage() {
     try {
       setIsLoading(true);
       const res = await createProduct(formData);
-
-      console.log(res.data.data);
-
       message.success(res.data.message);
-      router.push("/products");
+      router.push(`/products/${res.data.data.product_id}`);
     } catch (error) {
       console.error(error);
       message.error("Tạo sản phẩm thất bại");
@@ -274,7 +275,7 @@ export default function CreateProductPage() {
         form={form}
         layout="vertical"
         onFinish={onFinish}
-        initialValues={{ is_sale: false, category_ids: [] }}
+        initialValues={{ is_sale: false, is_active: true, category_ids: [] }}
         className="space-y-4"
       >
         <Form.Item
@@ -377,6 +378,10 @@ export default function CreateProductPage() {
           rules={[{ required: true, message: "Bắt buộc" }]}
         >
           <Input type="number" min={1000} />
+        </Form.Item>
+
+        <Form.Item label="Mở bán" name="is_active" valuePropName="checked">
+          <Switch onChange={(val) => setIsActive(val)} />
         </Form.Item>
 
         <Form.Item label="Khuyến mãi" name="is_sale" valuePropName="checked">

@@ -1,13 +1,25 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { Button, Table, Modal } from "antd";
+import { Button, Table, Popconfirm, Space, message } from "antd";
 import { useEffect, useState } from "react";
 import CreateColorModal from "./components/CreateColorModal";
 import DetailColorModal from "./components/DetailColorModal";
 import { Size } from "@/types/product";
-import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
-import { toast } from "react-toastify";
-import { getColors, createColor, updateColor } from "@/api/product";
+import {
+  DeleteOutlined,
+  EditOutlined,
+  PlusOutlined,
+  RestOutlined,
+} from "@ant-design/icons";
+import {
+  getColors,
+  createColor,
+  updateColor,
+  deleteColor,
+  deleteColors,
+} from "@/api/product";
+import { useRouter } from "next/navigation";
 
 const SizePage = () => {
   const [sizes, setSizes] = useState<Size[]>([]);
@@ -17,17 +29,16 @@ const SizePage = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedColor, setSelectedColor] = useState<Size | null>(null);
 
+  const router = useRouter();
+
   const fetchColors = async () => {
     setLoading(true);
     try {
       const res = await getColors();
       setSizes(res.data.data.colors);
-    } catch (error) {
-      const errorMessage =
-        typeof error === "object" && error !== null && "message" in error
-          ? (error as { message: string }).message
-          : "Tạo màu thất bại";
-      toast.error(errorMessage);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      message.error(error);
     } finally {
       setLoading(false);
     }
@@ -40,15 +51,11 @@ const SizePage = () => {
   const handleCreate = async (data: Size) => {
     try {
       const res = await createColor(data);
-      toast.success(res.data.message);
+      message.success(res.data.message);
       setCreateOpen(false);
       fetchColors();
-    } catch (error) {
-      const errorMessage =
-        typeof error === "object" && error !== null && "message" in error
-          ? (error as { message: string }).message
-          : "Tạo màu thất bại";
-      toast.error(errorMessage);
+    } catch (error: any) {
+      message.error(error);
     }
   };
 
@@ -56,44 +63,38 @@ const SizePage = () => {
     try {
       const res = await updateColor(updated.id, { name: updated.name });
       setSelectedColor(null);
-      toast.success(res.data.message);
+      message.success(res.data.message);
       fetchColors();
-    } catch (error) {
-      const errorMessage =
-        typeof error === "object" && error !== null && "message" in error
-          ? (error as { message: string }).message
-          : "Cập nhật màu thất bại";
-      toast.error(errorMessage);
+    } catch (error: any) {
+      message.error(error);
+    }
+  };
+  const handleDelete = async (id: string) => {
+    try {
+      const res = await deleteColor(id);
+      message.success(res.data.message);
+      fetchColors();
+    } catch (error: any) {
+      message.error(error);
     }
   };
 
-  const handleDelete = (record: Size) => {
-    Modal.confirm({
-      title: "Xác nhận xoá",
-      content: `Bạn có chắc chắn muốn xoá màu "${record.name}" không?`,
-      okText: "Xoá",
-      okType: "danger",
-      cancelText: "Hủy",
-      onOk: async () => {
-        try {
-          setSizes((prev) => prev.filter((s) => s.id !== record.id));
-          toast.success("Xoá thành công");
-        } catch (error) {
-          const errorMessage =
-            typeof error === "object" && error !== null && "message" in error
-              ? (error as { message: string }).message
-              : "Tạo size thất bại";
-          toast.error(errorMessage);
-        }
-      },
-    });
+  const handleBulkDelete = async () => {
+    try {
+      const res = await deleteColors(
+        selectedRowKeys.map((id) => id.toString())
+      );
+      message.success(res.data.message);
+      setSelectedRowKeys([]);
+      fetchColors();
+    } catch (error: any) {
+      message.error(error);
+    }
   };
 
   const rowSelection = {
     selectedRowKeys,
-    onChange: (keys: React.Key[]) => {
-      setSelectedRowKeys(keys);
-    },
+    onChange: (keys: React.Key[]) => setSelectedRowKeys(keys),
   };
 
   const columns = [
@@ -146,12 +147,19 @@ const SizePage = () => {
             onClick={() => setSelectedColor(record)}
             icon={<EditOutlined />}
           />
-          <Button
-            type="link"
-            onClick={() => handleDelete(record)}
-            icon={<DeleteOutlined />}
-            danger
-          />
+          <Popconfirm
+            title="Xác nhận xóa?"
+            description="Bạn có chắc muốn xóa mục này không?"
+            okText="Xóa"
+            cancelText="Hủy"
+            okButtonProps={{ danger: true }}
+            onConfirm={() => handleDelete(record.id)}
+          >
+            <Button
+              icon={<DeleteOutlined style={{ color: "red" }} />}
+              style={{ border: "none", boxShadow: "none" }}
+            />
+          </Popconfirm>
         </div>
       ),
     },
@@ -159,13 +167,43 @@ const SizePage = () => {
 
   return (
     <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between mb-5">
+        <Space>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => setCreateOpen(true)}
+          >
+            Tạo mới
+          </Button>
+
+          <Popconfirm
+            title={`Bạn có chắc muốn xóa ${selectedRowKeys.length} màu này?`}
+            onConfirm={handleBulkDelete}
+            okText="Xóa"
+            cancelText="Hủy"
+            disabled={selectedRowKeys.length === 0}
+          >
+            <Button
+              type="primary"
+              danger
+              icon={<DeleteOutlined />}
+              disabled={selectedRowKeys.length === 0}
+            >
+              {selectedRowKeys.length > 0
+                ? `Xóa ${selectedRowKeys.length} màu`
+                : "Xóa"}
+            </Button>
+          </Popconfirm>
+        </Space>
+
         <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => setCreateOpen(true)}
+          type="default"
+          icon={<RestOutlined style={{ color: "red" }} />}
+          onClick={() => router.push("/products/colors/deleted")}
+          className="border border-red-600"
         >
-          Tạo mới
+          Màu đã xóa
         </Button>
       </div>
 
@@ -174,7 +212,6 @@ const SizePage = () => {
         columns={columns}
         rowKey="id"
         loading={loading}
-        pagination={{ pageSize: 5 }}
         rowSelection={rowSelection}
       />
 

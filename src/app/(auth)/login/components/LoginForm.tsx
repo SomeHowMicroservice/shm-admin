@@ -6,7 +6,7 @@ import { CiLock, CiUser } from "react-icons/ci";
 import { useRouter } from "next/navigation";
 import { loginUser } from "@/services/auth";
 import { Spin } from "antd";
-import { toast } from "react-toastify";
+import { message } from "antd";
 
 const LoginForm = () => {
   const [form] = Form.useForm();
@@ -22,12 +22,12 @@ const LoginForm = () => {
     setIsSubmitting(true);
     try {
       const res = await loginUser(values);
-      toast.success(res.data.message);
+      message.success(res.data.message);
       setTimeout(() => {
         router.push("/");
       }, 1000);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : String(error));
+      message.error(error instanceof Error ? error.message : String(error));
     } finally {
       setIsSubmitting(false);
     }
