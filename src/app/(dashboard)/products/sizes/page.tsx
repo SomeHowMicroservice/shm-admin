@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { Button, Table, Modal, message, Popconfirm, Space } from "antd";
+import { Button, Table, message, Popconfirm, Space } from "antd";
 import { useEffect, useState } from "react";
 import SizeCreateModal from "./components/SizeCreateModal";
 import SizeDetailModal from "./components/SizeDetailModal";
@@ -12,7 +12,6 @@ import {
   PlusOutlined,
   RestOutlined,
 } from "@ant-design/icons";
-import { toast } from "react-toastify";
 import {
   getSizes,
   createSize,
@@ -37,12 +36,8 @@ const SizePage = () => {
     try {
       const res = await getSizes();
       setSizes(res.data.data.sizes);
-    } catch (error) {
-      const errorMessage =
-        typeof error === "object" && error !== null && "message" in error
-          ? (error as { message: string }).message
-          : "Tạo size thất bại";
-      toast.error(errorMessage);
+    } catch (error: any) {
+      message.error(error);
     } finally {
       setLoading(false);
     }
@@ -55,15 +50,11 @@ const SizePage = () => {
   const handleCreate = async (data: Size) => {
     try {
       const res = await createSize(data);
-      toast.success(res.data.message);
+      message.success(res.data.message);
       setCreateOpen(false);
       fetchSizes();
-    } catch (error) {
-      const errorMessage =
-        typeof error === "object" && error !== null && "message" in error
-          ? (error as { message: string }).message
-          : "Tạo size thất bại";
-      toast.error(errorMessage);
+    } catch (error: any) {
+      message.error(error);
     }
   };
 
@@ -71,14 +62,10 @@ const SizePage = () => {
     try {
       const res = await updateSize(updated.id, { name: updated.name });
       setSelectedSize(null);
-      toast.success(res.data.message);
+      message.success(res.data.message);
       fetchSizes();
-    } catch (error) {
-      const errorMessage =
-        typeof error === "object" && error !== null && "message" in error
-          ? (error as { message: string }).message
-          : "Cập nhật màu thất bại";
-      toast.error(errorMessage);
+    } catch (error: any) {
+      message.error(error);
     }
   };
 
