@@ -103,64 +103,91 @@ export default function EditProductPage() {
   const productId = String(param.id);
   const router = useRouter();
 
+  console.log(productId);
+
   const handleBack = () => {
     router.push("/products");
   };
 
-  const getAndSetData = useCallback(async () => {
+  const fetchProductDetail = async () => {
     try {
-      const [tagsRes, colorsRes, categoriesRes, sizesRes, productRes] =
-        await Promise.all([
-          getTagsNoChild(),
-          getColorsNoChild(),
-          getCategoriesNoChild(),
-          getSizesNoChild(),
-          getProductById(productId),
-        ]);
+      const res = await getProductById(productId);
+      message.success(res.data.message);
+      setProduct(res.data.data.product);
+    } catch (error: any) {
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        error?.toString() ||
+        "Failed to fetch product";
+      message.error(errorMessage);
+    }
+  };
 
-      const product = productRes.data.data.product;
+  useEffect(() => {
+    fetchProductDetail();
+  }, []);
+
+  const getAndSetData = useCallback(async () => {
+    if (!product) return;
+
+    try {
+      const [tagsRes, colorsRes, categoriesRes, sizesRes] = await Promise.all([
+        getTagsNoChild(),
+        getColorsNoChild(),
+        getCategoriesNoChild(),
+        getSizesNoChild(),
+      ]);
 
       const mergedTags = [
-        ...tagsRes.data.data.tags,
-        ...product.tags.filter(
+        ...(tagsRes.data.data.tags || []),
+        ...(product?.tags?.filter(
           (t: Tags) =>
-            !tagsRes.data.data.tags.some((apiT: Tags) => apiT.id === t.id)
-        ),
+            !(tagsRes.data.data.tags || []).some(
+              (apiT: Tags) => apiT.id === t.id
+            )
+        ) || []),
       ];
 
       const mergedCategories = [
-        ...categoriesRes.data.data.categories,
-        ...product.categories.filter(
+        ...(categoriesRes.data.data.categories || []),
+        ...(product?.categories?.filter(
           (c: Category) =>
-            !categoriesRes.data.data.categories.some(
+            !(categoriesRes.data.data.categories || []).some(
               (apiC: Category) => apiC.id === c.id
             )
-        ),
+        ) || []),
       ];
 
       const uniqueColorsFromProduct = Array.from(
         new Map(
-          product.variants.map((v: Variants) => [v.color.id, v.color])
+          (product?.variants || []).map((v: Variants) => [v.color.id, v.color])
         ).values()
       );
+
       const mergedColors = [
-        ...colorsRes.data.data.colors,
+        ...(colorsRes.data.data.colors || []),
         ...uniqueColorsFromProduct.filter(
           (c: any) =>
-            !colorsRes.data.data.colors.some((apiC: any) => apiC.id === c.id)
+            !(colorsRes.data.data.colors || []).some(
+              (apiC: any) => apiC.id === c.id
+            )
         ),
       ];
 
       const uniqueSizesFromProduct = Array.from(
         new Map(
-          product.variants.map((v: Variants) => [v.size.id, v.size])
+          (product?.variants || []).map((v: Variants) => [v.size.id, v.size])
         ).values()
       );
+
       const mergedSizes = [
-        ...sizesRes.data.data.sizes,
+        ...(sizesRes.data.data.sizes || []),
         ...uniqueSizesFromProduct.filter(
           (s: any) =>
-            !sizesRes.data.data.sizes.some((apiS: any) => apiS.id === s.id)
+            !(sizesRes.data.data.sizes || []).some(
+              (apiS: any) => apiS.id === s.id
+            )
         ),
       ];
 
@@ -169,18 +196,18 @@ export default function EditProductPage() {
       setColors(mergedColors);
       setSizes(mergedSizes);
       setProduct(product);
-      setIsSale(product.is_sale);
-      setIsActive(product.is_active);
-      setDescription(product.description);
+      setIsSale(product.is_sale || false);
+      setIsActive(product.is_active || true);
+      setDescription(product.description || "");
 
-      const mappedVariants = product.variants.map(
+      const mappedVariants = (product?.variants || []).map(
         (v: Variants, index: number) => ({
           id: v.id,
-          sku: v.sku,
-          color: v.color.name,
-          size: v.size.name,
-          color_id: v.color.id,
-          size_id: v.size.id,
+          sku: v.sku || "",
+          color: v.color?.name ?? "",
+          size: v.size?.name ?? "",
+          color_id: v.color?.id ?? null,
+          size_id: v.size?.id ?? null,
           quantity: Number(v.inventory?.quantity ?? 0),
           stock: Number(v.inventory?.stock ?? 0),
           sold_quantity: Number(v.inventory?.sold_quantity ?? 0),
@@ -190,18 +217,20 @@ export default function EditProductPage() {
       );
 
       const imageMap: Record<string, any[]> = {};
-      product.images.forEach((img: any, index: number) => {
-        const match = img.url.match(
+
+      (product?.images || []).forEach((img: any, index: number) => {
+        const match = img.url?.match(
           /([0-9a-fA-F\-]{36})_\d+\.(jpg|jpeg|png|webp)$/i
         );
         if (!match) return;
+
         const colorId = match[1];
-        const variant = product.variants.find(
-          (v: Variants) => v.color.id === colorId
+        const variant = (product?.variants || []).find(
+          (v: Variants) => v.color?.id === colorId
         );
         if (!variant) return;
 
-        const colorName = variant.color.name;
+        const colorName = variant.color?.name ?? `unknown-color-${colorId}`;
         const fileObj = {
           uid: img.id,
           name: `image-${index + 1}`,
@@ -222,18 +251,18 @@ export default function EditProductPage() {
       setColorImages(imageMap);
 
       const initialObj = {
-        title: product.title,
-        price: product.price,
-        is_sale: product.is_sale,
-        is_active: product.is_active,
+        title: product.title || "",
+        price: product.price || 0,
+        is_sale: Boolean(product.is_sale),
+        is_active: Boolean(product.is_active),
         sale_price:
           product.sale_price === undefined ? null : product.sale_price,
         start_sale:
           product.start_sale === undefined ? null : product.start_sale,
         end_sale: product.end_sale === undefined ? null : product.end_sale,
-        description: product.description,
-        tag_ids: product.tags.map((t: Tags) => t.id),
-        category_ids: product.categories.map((c: Category) => c.id),
+        description: product.description || "",
+        tag_ids: (product.tags || []).map((t: Tags) => t.id),
+        category_ids: (product.categories || []).map((c: Category) => c.id),
         variants: mappedVariants,
         colorImages: imageMap,
       };
@@ -242,17 +271,19 @@ export default function EditProductPage() {
 
       setTimeout(() => {
         const formValues = {
-          title: product.title,
-          slug: product.slug,
-          description: product.description,
-          price: product.price,
-          is_sale: product?.is_sale,
-          is_active: product?.is_active,
-          sale_price: product?.sale_price,
+          title: product.title || "",
+          slug: product.slug || "",
+          description: product.description || "",
+          price: product.price || 0,
+          is_sale: Boolean(product?.is_sale),
+          is_active: Boolean(product?.is_active),
+          sale_price: product?.sale_price || null,
           start_sale: product?.start_sale ? dayjs(product.start_sale) : null,
           end_sale: product?.end_sale ? dayjs(product.end_sale) : null,
-          tag_ids: [...product.tags.map((t: Tags) => t.id)],
-          category_ids: [...product.categories.map((c: Category) => c.id)],
+          tag_ids: [...(product.tags || []).map((t: Tags) => t.id)],
+          category_ids: [
+            ...(product.categories || []).map((c: Category) => c.id),
+          ],
           variants: mappedVariants.map((v: any, index: any) => ({
             ...v,
             _index: index,
@@ -263,16 +294,22 @@ export default function EditProductPage() {
         form.setFieldsValue(formValues);
       }, 100);
     } catch (error: any) {
-      message.error("Không thể tải dữ liệu sản phẩm");
-      console.error(error);
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        error?.toString() ||
+        "Failed to load data";
+      message.error(errorMessage);
     } finally {
       setLoadingOptions(false);
     }
-  }, [productId, form]);
+  }, [product, form]);
 
   useEffect(() => {
-    getAndSetData();
-  }, [getAndSetData]);
+    if (product) {
+      getAndSetData();
+    }
+  }, [product]);
 
   const handleColorImageChange = (
     colorName: string,
@@ -355,6 +392,11 @@ export default function EditProductPage() {
       (!values.sale_price || !values.start_sale || !values.end_sale)
     ) {
       message.warning("Vui lòng điền đầy đủ thông tin khuyến mãi!");
+      return;
+    }
+
+    if (!originalData) {
+      message.error("Dữ liệu gốc chưa được tải!");
       return;
     }
 
@@ -613,11 +655,6 @@ export default function EditProductPage() {
       });
     }
 
-    // Debug: In ra tất cả entries trong FormData
-    console.log("FormData entries:", [...formData.entries()]);
-    console.log("Has changes:", hasChanges);
-
-    // Kiểm tra có thay đổi không
     if (!hasChanges) {
       message.info("Không có thay đổi nào để lưu!");
       return;
@@ -629,9 +666,14 @@ export default function EditProductPage() {
       message.success(res.data.message);
       setDeletedImageIds([]);
       setDeleteVariantIds([]);
-      getAndSetData();
+      await fetchProductDetail();
     } catch (error: any) {
-      message.error(error.message);
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        error?.toString() ||
+        "Update failed";
+      message.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -646,7 +688,11 @@ export default function EditProductPage() {
   }
 
   if (!product) {
-    return null;
+    return (
+      <div className="flex justify-center p-12">
+        <Spin size="large" />
+      </div>
+    );
   }
 
   return (
@@ -742,17 +788,13 @@ export default function EditProductPage() {
           label="Mô tả chi tiết"
           name="description"
           rules={[{ required: true, message: "Vui lòng nhập mô tả chi tiết" }]}
-          validateStatus={!form.getFieldValue("description") ? "error" : ""}
-          help={
-            !form.getFieldValue("description")
-              ? "Vui lòng nhập mô tả chi tiết"
-              : ""
-          }
         >
           <Editor
             apiKey={apiKey}
+            value={description}
             onEditorChange={(content) => {
               setDescription(content);
+              form.setFieldsValue({ description: content });
             }}
             init={{
               height: 400,
@@ -842,24 +884,11 @@ export default function EditProductPage() {
 
                 <div className="space-y-6">
                   {fields.map(({ key, name, ...restField }) => {
-                    // Lấy variant data để debug
-                    const currentVariant = form.getFieldValue([
-                      "variants",
-                      name,
-                    ]);
-
                     return (
                       <div
                         key={key}
                         className="relative space-y-4 border p-4 rounded-md"
                       >
-                        {/* Debug info - có thể xóa sau khi fix */}
-                        <div className="text-xs text-gray-500 mb-2">
-                          Debug: Field Index={name}, Key={key}, ID=
-                          {currentVariant?.id}
-                        </div>
-
-                        {/* Icon xoá ở góc phải trên */}
                         <MinusCircleOutlined
                           onClick={() => {
                             const variant = form.getFieldValue([

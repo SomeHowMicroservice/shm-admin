@@ -60,6 +60,18 @@ export interface Tags {
 }
 
 export interface Product {
+  images: never[];
+  variants: never[];
+  tags: never[];
+  description: string;
+  end_sale: undefined;
+  end_sale: any;
+  start_sale: any;
+  start_sale: undefined;
+  is_active: any;
+  is_sale: any;
+  sale_price: any;
+  sale_price: undefined;
   updated_by: any;
   updated_at: string | number | Date;
   created_at: string | number | Date;

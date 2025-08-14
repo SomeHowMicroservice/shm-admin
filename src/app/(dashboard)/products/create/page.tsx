@@ -286,7 +286,11 @@ export default function CreateProductPage() {
           <Input />
         </Form.Item>
 
-        <Form.Item label="Danh mục" name="category_ids">
+        <Form.Item
+          label="Danh mục"
+          name="category_ids"
+          rules={[{ required: true, message: "Vui lòng chọn danh mục" }]}
+        >
           <Select mode="multiple" placeholder="Chọn danh mục">
             {categories.map((c: Category) => (
               <Option key={c.id} value={c.id}>
@@ -396,122 +400,232 @@ export default function CreateProductPage() {
               </Form.Item>
 
               <Form.Item label="Bắt đầu khuyến mãi" name="start_sale">
-                <DatePicker
-                  className="w-full"
-                  showTime
-                  format="YYYY-MM-DD H:mm"
-                />
+                <DatePicker className="w-full" format="YYYY-MM-DD" />
               </Form.Item>
 
               <Form.Item label="Kết thúc khuyến mãi" name="end_sale">
-                <DatePicker
-                  className="w-full"
-                  showTime
-                  format="YYYY-MM-DD HH:mm"
-                />
+                <DatePicker className="w-full" format="YYYY-MM-DD" />
               </Form.Item>
             </div>
           </>
         )}
 
         <Form.Item label="Thuộc tính sản phẩm">
-          <Form.List name="variants">
+          <Form.List
+            name="variants"
+            rules={[
+              {
+                validator: async (_, variants) => {
+                  if (!variants || variants.length < 1) {
+                    return Promise.reject(
+                      new Error("Vui lòng thêm ít nhất 1 thuộc tính")
+                    );
+                  }
+                },
+              },
+            ]}
+          >
             {(fields, { add, remove }) => (
               <>
                 <div className="flex justify-between items-center mb-2">
                   <Button
                     type="dashed"
                     icon={<PlusOutlined />}
-                    onClick={() => add()}
+                    onClick={() => {
+                      add({
+                        sku: "",
+                        size: undefined,
+                        color: undefined,
+                        quantity: 0,
+                        sold_quantity: 0,
+                        stock: 0,
+                        is_stock: true,
+                        _uniqueKey: `new_${Date.now()}_${Math.random()}`,
+                      });
+                    }}
                   >
                     Thêm thuộc tính
                   </Button>
                 </div>
 
                 <div className="space-y-6">
-                  {fields.map(({ key, name, ...restField }) => (
-                    <div
-                      key={key}
-                      className="relative space-y-4 border p-4 rounded-md"
-                    >
-                      {/* Icon xoá ở góc phải trên */}
-                      <MinusCircleOutlined
-                        onClick={() => remove(name)}
-                        className="absolute top-2 right-2 text-red-500 hover:text-red-700 text-xl cursor-pointer"
-                      />
+                  {fields.map(({ key, name, ...restField }) => {
+                    const currentVariant = form.getFieldValue([
+                      "variants",
+                      name,
+                    ]);
 
-                      <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 items-center">
-                        <Form.Item
-                          {...restField}
-                          label="SKU"
-                          name={[name, "sku"]}
-                          rules={[{ required: true, message: "Nhập SKU" }]}
-                          className="m-0"
-                        >
-                          <Input size="large" />
-                        </Form.Item>
+                    return (
+                      <div
+                        key={key}
+                        className="relative space-y-4 border p-4 rounded-md"
+                      >
+                        {/* Icon xoá ở góc phải trên */}
+                        <MinusCircleOutlined
+                          onClick={() => {
+                            const variant = form.getFieldValue([
+                              "variants",
+                              name,
+                            ]);
+                            console.log("Removing variant:", variant);
 
-                        <Form.Item
-                          {...restField}
-                          label="Số lượng"
-                          name={[name, "quantity"]}
-                          rules={[{ required: true, message: "Nhập số lượng" }]}
-                          className="m-0"
-                        >
-                          <Input type="number" size="large" />
-                        </Form.Item>
+                            if (variant?.id) {
+                              setDeleteVariantIds((prev) => {
+                                const newIds = [...prev, variant.id];
+                                console.log("Updated delete list:", newIds);
+                                return newIds;
+                              });
+                            }
+                            remove(name);
+                          }}
+                          className="absolute top-2 right-2 text-red-500 hover:text-red-700 text-xl cursor-pointer"
+                        />
 
-                        <Form.Item
-                          {...restField}
-                          label="Size"
-                          name={[name, "size"]}
-                          rules={[{ required: true, message: "Chọn size" }]}
-                          className="m-0"
-                        >
-                          <Select placeholder="Chọn size" size="large">
-                            {sizes.map((s: Size) => (
-                              <Option key={s.id} value={s.name}>
-                                {s.name}
-                              </Option>
-                            ))}
-                          </Select>
-                        </Form.Item>
-
-                        <Form.Item
-                          {...restField}
-                          label="Màu"
-                          name={[name, "color"]}
-                          rules={[{ required: true, message: "Chọn màu" }]}
-                          className="m-0"
-                        >
-                          <Select
-                            placeholder="Chọn màu"
-                            size="large"
-                            onChange={() => {
-                              setTimeout(() => {
-                                form.validateFields();
-                              }, 100);
-                            }}
+                        <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 items-center">
+                          <Form.Item
+                            {...restField}
+                            label="SKU"
+                            name={[name, "sku"]}
+                            rules={[{ required: true, message: "Nhập SKU" }]}
+                            className="m-0"
                           >
-                            {colors.map((c: Color) => (
-                              <Option key={c.id} value={c.name}>
-                                {c.name}
-                              </Option>
-                            ))}
-                          </Select>
-                        </Form.Item>
+                            <Input size="large" />
+                          </Form.Item>
+
+                          <Form.Item
+                            {...restField}
+                            label="Số lượng"
+                            name={[name, "quantity"]}
+                            rules={[
+                              { required: true, message: "Nhập số lượng" },
+                            ]}
+                            className="m-0"
+                          >
+                            <Input size="large" min={0} className="w-full" />
+                          </Form.Item>
+
+                          <Form.Item
+                            {...restField}
+                            label="Size"
+                            name={[name, "size"]}
+                            rules={[{ required: true, message: "Chọn size" }]}
+                            className="m-0"
+                          >
+                            <Select placeholder="Chọn size" size="large">
+                              {sizes.map((s: Size) => (
+                                <Option key={s.id} value={s.name}>
+                                  {s.name}
+                                </Option>
+                              ))}
+                            </Select>
+                          </Form.Item>
+
+                          <Form.Item
+                            {...restField}
+                            label="Màu"
+                            name={[name, "color"]}
+                            rules={[{ required: true, message: "Chọn màu" }]}
+                            className="m-0"
+                          >
+                            <Select
+                              placeholder="Chọn màu"
+                              size="large"
+                              onChange={() => {
+                                // Trigger form validation after color change
+                                setTimeout(() => {
+                                  form.validateFields();
+                                }, 100);
+                              }}
+                            >
+                              {colors.map((c: Color) => (
+                                <Option key={c.id} value={c.name}>
+                                  {c.name}
+                                </Option>
+                              ))}
+                            </Select>
+                          </Form.Item>
+
+                          <Form.Item
+                            {...restField}
+                            label="Đã bán"
+                            name={[name, "sold_quantity"]}
+                            className="m-0"
+                          >
+                            <Input type="number" size="large" disabled />
+                          </Form.Item>
+
+                          <Form.Item
+                            {...restField}
+                            label="Tồn kho"
+                            name={[name, "stock"]}
+                            className="m-0"
+                          >
+                            <Input type="number" size="large" disabled />
+                          </Form.Item>
+
+                          <Form.Item
+                            label="Còn hàng"
+                            name={[name, "is_stock"]}
+                            valuePropName="checked"
+                          >
+                            <Switch disabled />
+                          </Form.Item>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </>
             )}
           </Form.List>
         </Form.Item>
 
-        <Form.Item label="Ảnh sản phẩm theo màu">
+        <Form.Item
+          label="Ảnh sản phẩm theo màu"
+          name="colorImages"
+          rules={[
+            {
+              validator: () => {
+                const selectedColors = getSelectedColors();
+                const totalImages = Object.values(colorImages || {}).reduce(
+                  (sum, list) => sum + list.length,
+                  0
+                );
+
+                // Kiểm tra có ít nhất 1 thuộc tính
+                if (selectedColors.length === 0) {
+                  return Promise.reject(
+                    new Error("Vui lòng thêm ít nhất 1 thuộc tính sản phẩm")
+                  );
+                }
+
+                // Kiểm tra có ít nhất 1 ảnh
+                if (totalImages === 0) {
+                  return Promise.reject(
+                    new Error("Vui lòng chọn ít nhất 1 ảnh")
+                  );
+                }
+
+                // Kiểm tra mỗi màu được chọn phải có ít nhất 1 ảnh
+                for (const colorName of selectedColors) {
+                  const colorImagesList = colorImages[String(colorName)] || [];
+                  if (colorImagesList.length === 0) {
+                    return Promise.reject(
+                      new Error(
+                        `Vui lòng chọn ít nhất 1 ảnh cho màu ${colorName}`
+                      )
+                    );
+                  }
+                }
+
+                return Promise.resolve();
+              },
+            },
+          ]}
+        >
           <Form.Item
             shouldUpdate={(prev, cur) => prev.variants !== cur.variants}
+            noStyle
           >
             {() => {
               const selectedColors = getSelectedColors();
@@ -531,7 +645,13 @@ export default function CreateProductPage() {
                       key={String(colorName)}
                       colorName={String(colorName)}
                       initialList={colorImages[String(colorName)] || []}
-                      handleColorImageChange={handleColorImageChange}
+                      handleColorImageChange={(colorName, info) => {
+                        handleColorImageChange(colorName, info);
+                        // Trigger validation after image change
+                        setTimeout(() => {
+                          form.validateFields(["colorImages"]);
+                        }, 100);
+                      }}
                       onSetThumbnail={handleSetThumbnail}
                     />
                   ))}
@@ -541,7 +661,67 @@ export default function CreateProductPage() {
           </Form.Item>
         </Form.Item>
 
-        <Form.Item label="Tag" name="tag_ids">
+        <Form.Item
+          noStyle
+          shouldUpdate={(prev, cur) =>
+            prev.variants !== cur.variants ||
+            JSON.stringify(colorImages) !== JSON.stringify(prev.colorImages)
+          }
+        >
+          {() => {
+            const variants = form.getFieldValue("variants") || [];
+            const selectedColors = getSelectedColors();
+
+            const validationErrors: string[] = [];
+
+            if (variants.length === 0) {
+              validationErrors.push(
+                "Vui lòng thêm ít nhất 1 thuộc tính sản phẩm"
+              );
+            }
+
+            if (selectedColors.length > 0) {
+              const totalImages = Object.values(colorImages || {}).reduce(
+                (sum, list) => sum + list.length,
+                0
+              );
+
+              if (totalImages === 0) {
+                validationErrors.push("Vui lòng chọn ít nhất 1 ảnh");
+              } else {
+                for (const colorName of selectedColors) {
+                  const colorImagesList = colorImages[String(colorName)] || [];
+                  if (colorImagesList.length === 0) {
+                    validationErrors.push(`Màu ${colorName} chưa có ảnh`);
+                  }
+                }
+              }
+            }
+
+            if (validationErrors.length > 0) {
+              return (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                  <div className="text-red-600 text-sm">
+                    <div className="font-medium mb-1">Cần hoàn thiện:</div>
+                    <ul className="list-disc list-inside space-y-1">
+                      {validationErrors.map((error, index) => (
+                        <li key={index}>{error}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              );
+            }
+
+            return null;
+          }}
+        </Form.Item>
+
+        <Form.Item
+          label="Tag"
+          name="tag_ids"
+          rules={[{ required: true, message: "Vui lòng chọn ít nhất 1 tag" }]}
+        >
           <Select mode="multiple" placeholder="Chọn tag">
             {tags.map((t: Tags) => (
               <Option key={t.id} value={t.id}>
