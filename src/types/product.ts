@@ -89,6 +89,7 @@ export interface Product {
 }
 
 export interface Category {
+  slug: ReactNode;
   id: string;
   name: string;
 }

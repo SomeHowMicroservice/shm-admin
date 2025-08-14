@@ -38,7 +38,7 @@ const LoginForm = () => {
       form={form}
       layout="vertical"
       onFinish={onFinish}
-      className="mx-auto space-y-4 md:w-1/2 w-full"
+      className="mx-auto space-y-4 lg:w-1/3 md:w-1/2 w-full"
     >
       <h2 className="md:text-2xl text-lg text-black font-bold mb-2 text-center">
         ĐĂNG NHẬP CHO NHÀ QUẢN TRỊ

@@ -144,7 +144,7 @@ export default function DeletedProduct() {
       key: "categories",
       render: (categories: Category[]) => (
         <div className="flex flex-wrap gap-2">
-          {categories.map((cat) => (
+          {categories?.map((cat) => (
             <Tag key={cat.id} color="blue">
               {cat.name}
             </Tag>

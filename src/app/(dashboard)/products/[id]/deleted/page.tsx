@@ -255,7 +255,7 @@ export default function EditProductPage() {
 
           <Form.Item label="Danh mục" name="category_ids">
             <Select mode="multiple" placeholder="Chọn danh mục" disabled>
-              {categories.map((c: Category) => (
+              {categories?.map((c: Category) => (
                 <Option key={c.id} value={c.id}>
                   {c.name}
                 </Option>
@@ -265,7 +265,7 @@ export default function EditProductPage() {
 
           <Form.Item label="Tag" name="tag_ids">
             <Select mode="multiple" placeholder="Chọn tag" disabled>
-              {tags.map((t: Tags) => (
+              {tags?.map((t: Tags) => (
                 <Option key={t.id} value={t.id}>
                   {t.name}
                 </Option>

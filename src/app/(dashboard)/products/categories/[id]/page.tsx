@@ -44,6 +44,7 @@ interface Category {
 }
 
 interface CategoryOption {
+  slug: ReactNode;
   id: string;
   name: string;
 }
@@ -190,6 +191,9 @@ const CategoryDetailPage = () => {
                       .map((cat) => (
                         <Option key={cat.id} value={cat.id}>
                           {cat.name}
+                          <div className="text-xs ml-3 inline-block text-gray-600">
+                            ({cat.slug})
+                          </div>
                         </Option>
                       ))}
                   </Select>

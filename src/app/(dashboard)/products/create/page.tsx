@@ -295,6 +295,9 @@ export default function CreateProductPage() {
             {categories.map((c: Category) => (
               <Option key={c.id} value={c.id}>
                 {c.name}
+                <div className="text-xs ml-3 inline-block text-gray-600">
+                  ({c.slug})
+                </div>
               </Option>
             ))}
           </Select>
@@ -427,27 +430,6 @@ export default function CreateProductPage() {
           >
             {(fields, { add, remove }) => (
               <>
-                <div className="flex justify-between items-center mb-2">
-                  <Button
-                    type="dashed"
-                    icon={<PlusOutlined />}
-                    onClick={() => {
-                      add({
-                        sku: "",
-                        size: undefined,
-                        color: undefined,
-                        quantity: 0,
-                        sold_quantity: 0,
-                        stock: 0,
-                        is_stock: true,
-                        _uniqueKey: `new_${Date.now()}_${Math.random()}`,
-                      });
-                    }}
-                  >
-                    Thêm thuộc tính
-                  </Button>
-                </div>
-
                 <div className="space-y-6">
                   {fields.map(({ key, name, ...restField }) => {
                     const currentVariant = form.getFieldValue([
@@ -544,36 +526,30 @@ export default function CreateProductPage() {
                               ))}
                             </Select>
                           </Form.Item>
-
-                          <Form.Item
-                            {...restField}
-                            label="Đã bán"
-                            name={[name, "sold_quantity"]}
-                            className="m-0"
-                          >
-                            <Input type="number" size="large" disabled />
-                          </Form.Item>
-
-                          <Form.Item
-                            {...restField}
-                            label="Tồn kho"
-                            name={[name, "stock"]}
-                            className="m-0"
-                          >
-                            <Input type="number" size="large" disabled />
-                          </Form.Item>
-
-                          <Form.Item
-                            label="Còn hàng"
-                            name={[name, "is_stock"]}
-                            valuePropName="checked"
-                          >
-                            <Switch disabled />
-                          </Form.Item>
                         </div>
                       </div>
                     );
                   })}
+                </div>
+                <div className="flex justify-between items-center mt-2">
+                  <Button
+                    type="dashed"
+                    icon={<PlusOutlined />}
+                    onClick={() => {
+                      add({
+                        sku: "",
+                        size: undefined,
+                        color: undefined,
+                        quantity: 0,
+                        sold_quantity: 0,
+                        stock: 0,
+                        is_stock: true,
+                        _uniqueKey: `new_${Date.now()}_${Math.random()}`,
+                      });
+                    }}
+                  >
+                    Thêm thuộc tính
+                  </Button>
                 </div>
               </>
             )}

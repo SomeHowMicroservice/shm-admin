@@ -734,6 +734,9 @@ export default function EditProductPage() {
               {categories.map((c: Category) => (
                 <Option key={c.id} value={c.id}>
                   {c.name}
+                  <div className="text-xs ml-3 inline-block text-gray-600">
+                    ({c.slug})
+                  </div>
                 </Option>
               ))}
             </Select>
@@ -860,28 +863,6 @@ export default function EditProductPage() {
           <Form.List name="variants">
             {(fields, { add, remove }) => (
               <>
-                <div className="flex justify-between items-center mb-2">
-                  <Button
-                    type="dashed"
-                    icon={<PlusOutlined />}
-                    onClick={() => {
-                      // Tạo variant mới với unique key
-                      add({
-                        sku: "",
-                        size: undefined,
-                        color: undefined,
-                        quantity: 0,
-                        sold_quantity: 0,
-                        stock: 0,
-                        is_stock: true,
-                        _uniqueKey: `new_${Date.now()}_${Math.random()}`,
-                      });
-                    }}
-                  >
-                    Thêm thuộc tính
-                  </Button>
-                </div>
-
                 <div className="space-y-6">
                   {fields.map(({ key, name, ...restField }) => {
                     return (
@@ -1055,6 +1036,27 @@ export default function EditProductPage() {
                       </div>
                     );
                   })}
+                </div>
+                <div className="flex justify-between items-center mt-2">
+                  <Button
+                    type="dashed"
+                    icon={<PlusOutlined />}
+                    onClick={() => {
+                      // Tạo variant mới với unique key
+                      add({
+                        sku: "",
+                        size: undefined,
+                        color: undefined,
+                        quantity: 0,
+                        sold_quantity: 0,
+                        stock: 0,
+                        is_stock: true,
+                        _uniqueKey: `new_${Date.now()}_${Math.random()}`,
+                      });
+                    }}
+                  >
+                    Thêm thuộc tính
+                  </Button>
                 </div>
               </>
             )}
