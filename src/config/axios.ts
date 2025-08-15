@@ -1,3 +1,4 @@
+// api/axiosClient.ts
 import axios, {
   AxiosError,
   AxiosInstance,
@@ -5,40 +6,41 @@ import axios, {
   AxiosResponse,
 } from "axios";
 import qs from "qs";
-import { ACCESS_TOKEN, REFRESH_TOKEN } from "@/constants/token";
-import { useAppStore } from "@/stores/useAuthStore";
-import { getRefreshToken, setTokenServer } from "@/api/auth";
 import { getCookie } from "@/utils/cookies";
+import { ACCESS_TOKEN } from "@/constants/token";
+import { setTokenServer } from "@/api/auth";
+import { useAppStore } from "@/stores/useAuthStore";
 
 type IRequestCb = (token: string) => void;
 
 let isRefreshing = false;
 let refreshSubscribers: IRequestCb[] = [];
 
-// Helper: subscribe waiting requests to retry
 const subscribeTokenRefresh = (cb: IRequestCb) => {
   refreshSubscribers.push(cb);
 };
 
-// Helper: call all waiting subscribers after token refreshed
 const onRefreshed = (newToken: string) => {
   refreshSubscribers.forEach((cb) => cb(newToken));
-  refreshSubscribers = []; // clear after done
+  refreshSubscribers = [];
 };
 
-// Create Axios instance
+// Axios cho request thường
 const axiosRequest: AxiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
   timeout: 10000,
-  withCredentials: true,
+  withCredentials: true, // cookie HttpOnly sẽ tự gửi
   paramsSerializer: (params) =>
-    qs.stringify(params, {
-      arrayFormat: "indices",
-      allowDots: true,
-    }),
+    qs.stringify(params, { arrayFormat: "indices", allowDots: true }),
 });
 
-// Request interceptor
+// Axios riêng cho refresh token (không interceptor để tránh loop)
+const refreshAxios = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  withCredentials: true, // cookie HttpOnly tự gửi khi refresh
+});
+
+// Interceptor request: gắn access token từ cookie vào header
 axiosRequest.interceptors.request.use(
   (config) => {
     const token = getCookie(ACCESS_TOKEN);
@@ -50,66 +52,60 @@ axiosRequest.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor
+// Interceptor response: handle 401 và refresh token
 axiosRequest.interceptors.response.use(
   (response: AxiosResponse) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as AxiosRequestConfig & {
       _retry?: boolean;
     };
-    const oldRefreshToken = getCookie(REFRESH_TOKEN);
 
     if (error.response?.status === 401) {
-      if (!oldRefreshToken) {
-        useAppStore.getState().clearProfile();
-        return Promise.reject("Unauthenticated: Please login again.");
-      }
-
       if (originalRequest._retry) {
-        // prevent infinite loop
         useAppStore.getState().clearProfile();
-        return Promise.reject("Unauthorized: Token refresh failed.");
+        return Promise.reject("Unauthorized.");
       }
 
-      if (!isRefreshing) {
-        isRefreshing = true;
-        try {
-          const { data } = await getRefreshToken();
-          setTokenServer(data);
-          onRefreshed(data.accessToken);
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        } catch (err) {
-          useAppStore.getState().clearProfile();
-          return Promise.reject("Session expired. Please login again.");
-        } finally {
-          isRefreshing = false;
-        }
-      }
+      originalRequest._retry = true;
 
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
         subscribeTokenRefresh((newToken: string) => {
           if (originalRequest.headers) {
             originalRequest.headers.Authorization = `Bearer ${newToken}`;
           }
-          originalRequest._retry = true;
           resolve(axiosRequest(originalRequest));
         });
+
+        if (!isRefreshing) {
+          isRefreshing = true;
+          refreshAxios
+            .post("/auth/refresh")
+            .then(({ data }) => {
+              setTokenServer(data);
+              onRefreshed(data.accessToken);
+            })
+            .catch((err) => {
+              useAppStore.getState().clearProfile();
+              reject("Session expired. Please login again.");
+            })
+            .finally(() => {
+              isRefreshing = false;
+            });
+        }
       });
     }
 
-    // Handle network errors globally
     if (error.code === AxiosError.ERR_NETWORK) {
       return Promise.reject("Network error. Please check your connection.");
     }
 
-    // Default fallback
-    const errorMessage =
+    return Promise.reject(
       error.response?.data &&
-      typeof error.response.data === "object" &&
-      "message" in error.response.data
+        typeof error.response.data === "object" &&
+        "message" in error.response.data
         ? (error.response.data as { message: string }).message
-        : "An unexpected error occurred.";
-    return Promise.reject(errorMessage);
+        : "Unexpected error."
+    );
   }
 );
 

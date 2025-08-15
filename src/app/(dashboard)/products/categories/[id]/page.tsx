@@ -44,7 +44,7 @@ interface Category {
 }
 
 interface CategoryOption {
-  slug: ReactNode;
+  slug: string;
   id: string;
   name: string;
 }
@@ -131,6 +131,7 @@ const CategoryDetailPage = () => {
       if (id) {
         const res = await deleteCategory(id.toString());
         message.success(res.data.message);
+        router.push("/products/categories");
       }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {

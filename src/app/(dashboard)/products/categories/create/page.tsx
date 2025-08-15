@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -38,15 +39,24 @@ const CreateCategoryPage = () => {
     values: ICreateCategoryData & { parent_ids?: string[] }
   ) => {
     try {
-      const { parent_ids, ...rest } = values;
-      const payload = parent_ids?.length ? { ...rest, parent_ids } : rest;
+      const { parent_ids, slug, ...rest } = values;
 
-      const res = await createCategory(payload);
+      const payload = {
+        ...rest,
+        ...(slug ? { slug } : {}),
+        ...(parent_ids?.length ? { parent_ids } : {}),
+      };
+
+      const res = await createCategory(
+        payload as { name: string; slug?: string }
+      );
       message.success(res.data.message);
-      router.push("/products/categories");
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      router.push(`/products/categories/${res.data.data.category_id}`);
     } catch (error: any) {
-      message.error(error);
+      const errorMsg =
+        error?.response?.data?.message || error?.message || String(error);
+
+      message.error(errorMsg);
     }
   };
 

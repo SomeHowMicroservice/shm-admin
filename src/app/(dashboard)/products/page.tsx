@@ -43,13 +43,29 @@ const ProductListPage = () => {
   const [loading, setLoading] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const router = useRouter();
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [sort, setSort] = useState<string | undefined>();
+  const [order, setOrder] = useState<"asc" | "desc" | undefined>();
+  const [isActive, setIsActive] = useState<boolean | undefined>();
+  const [search, setSearch] = useState<string | undefined>();
+  const [categoryId, setCategoryId] = useState<string | undefined>();
+  const [tagId, setTagId] = useState<string | undefined>();
 
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const res = await getAllProducts();
+      const res = await getAllProducts({
+        page,
+        limit,
+        sort,
+        order,
+        is_active: isActive,
+        search,
+        category_id: categoryId,
+        tag_id: tagId,
+      });
       setProducts(res.data.data.products || []);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       message.error(error);
     } finally {

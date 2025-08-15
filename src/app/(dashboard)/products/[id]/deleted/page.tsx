@@ -26,10 +26,14 @@ import {
 import { Editor } from "@tinymce/tinymce-react";
 import ColorImageUpload from "../../create/components/ColorImageUpload";
 import { useParams } from "next/navigation";
-import { getDeletedProductDetail, restoreProduct } from "@/api/product";
+import {
+  deleteProductPermanent,
+  getDeletedProductDetail,
+  restoreProduct,
+} from "@/api/product";
 import dayjs from "dayjs";
 import { useRouter } from "next/navigation";
-import { RollbackOutlined } from "@ant-design/icons";
+import { DeleteOutlined, RollbackOutlined } from "@ant-design/icons";
 
 export interface ProductFormValues {
   update_images: any;
@@ -92,62 +96,67 @@ export default function EditProductPage() {
 
   const getAndSetData = useCallback(async () => {
     try {
+      setLoadingOptions(true);
+
       const productRes = await getDeletedProductDetail(productId);
       const product = productRes.data.data.product;
 
-      setTags(product.tags);
-      setCategories(product.categories);
+      setTags(product.tags || []);
+      setCategories(product.categories || []);
 
-      // Lấy danh sách color và size trực tiếp từ variants
       const colorsFromProduct = Array.from(
         new Map(
-          product.variants.map((v: Variants) => [v.color.id, v.color])
+          (product.variants || [])
+            .map((v: Variants) => [v.color?.id, v.color])
+            .filter(([id, color]) => id && color)
         ).values()
       );
       setColors(colorsFromProduct);
 
       const sizesFromProduct = Array.from(
         new Map(
-          product.variants.map((v: Variants) => [v.size.id, v.size])
+          (product.variants || [])
+            .map((v: Variants) => [v.size?.id, v.size])
+            .filter(([id, size]) => id && size)
         ).values()
       );
       setSizes(sizesFromProduct);
 
       setProduct(product);
-      setIsSale(product.is_sale);
+      setIsSale(product.is_sale || false);
 
-      // Map variants
-      const mappedVariants = product.variants.map(
+      const mappedVariants = (product.variants || []).map(
         (v: Variants, index: number) => ({
           id: v.id,
-          sku: v.sku,
-          color: v.color.name,
-          size: v.size.name,
-          color_id: v.color.id,
-          size_id: v.size.id,
-          quantity: Number(v.inventory?.quantity ?? 0),
-          stock: Number(v.inventory?.stock ?? 0),
-          sold_quantity: Number(v.inventory?.sold_quantity ?? 0),
+          sku: v.sku || "",
+          color: v.color?.name || "",
+          size: v.size?.name || "",
+          color_id: v.color?.id || "",
+          size_id: v.size?.id || "",
+          quantity: Number(v.inventory?.quantity || 0),
+          stock: Number(v.inventory?.stock || 0),
+          sold_quantity: Number(v.inventory?.sold_quantity || 0),
           is_stock: Boolean(v.inventory?.is_stock ?? true),
           _uniqueKey: `${v.id}_${index}_${Date.now()}`,
         })
       );
 
-      // Xử lý hình ảnh theo color
       const imageMap: Record<string, any[]> = {};
-      product.images.forEach((img: any, index: number) => {
-        const match = img.url.match(
+      (product.images || []).forEach((img: any, index: number) => {
+        const match = img.url?.match(
           /([0-9a-fA-F\-]{36})_\d+\.(jpg|jpeg|png|webp)$/i
         );
         if (!match) return;
 
         const colorId = match[1];
-        const variant = product.variants.find(
-          (v: Variants) => v.color.id === colorId
+        const variant = product.variants?.find(
+          (v: Variants) => v.color?.id === colorId
         );
         if (!variant) return;
 
-        const colorName = variant.color.name;
+        const colorName = variant.color?.name;
+        if (!colorName) return;
+
         const fileObj = {
           uid: img.id,
           name: `image-${index + 1}`,
@@ -166,28 +175,27 @@ export default function EditProductPage() {
       });
       setColorImages(imageMap);
 
-      // Set form values
-      setTimeout(() => {
-        const formValues = {
-          title: product.title,
-          slug: product.slug,
-          description: product.description,
-          price: product.price,
-          is_sale: product?.is_sale,
-          sale_price: product?.sale_price,
-          start_sale: product?.start_sale ? dayjs(product.start_sale) : null,
-          end_sale: product?.end_sale ? dayjs(product.end_sale) : null,
-          tag_ids: product.tags.map((t: Tags) => t.id),
-          category_ids: product.categories.map((c: Category) => c.id),
-          variants: mappedVariants.map((v: Variants, index: any) => ({
-            ...v,
-            _index: index,
-          })),
-        };
-        form.setFieldsValue(formValues);
-      }, 100);
+      const formValues = {
+        title: product.title || "",
+        slug: product.slug || "",
+        description: product.description || "",
+        price: product.price || 0,
+        is_sale: Boolean(product.is_sale),
+        sale_price: product.sale_price || 0,
+        start_sale: product.start_sale ? dayjs(product.start_sale) : null,
+        end_sale: product.end_sale ? dayjs(product.end_sale) : null,
+        tag_ids: (product.tags || []).map((t: Tags) => t.id),
+        category_ids: (product.categories || []).map((c: Category) => c.id),
+        variants: mappedVariants,
+      };
+      form.setFieldsValue(formValues);
+
+      form.resetFields();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      form.setFieldsValue(formValues);
     } catch (error: any) {
-      message.error(error);
+      console.error("Error in getAndSetData:", error);
+      message.error(error?.message || "Có lỗi xảy ra khi tải dữ liệu");
     } finally {
       setLoadingOptions(false);
     }
@@ -206,12 +214,25 @@ export default function EditProductPage() {
 
   useEffect(() => {
     getAndSetData();
-  }, [getAndSetData]);
+  }, []);
 
   const handleRestore = async () => {
     try {
       setIsLoading(true);
       const res = await restoreProduct(productId);
+      message.success(res.data.message);
+      router.push("/products/deleted");
+    } catch (error: any) {
+      message.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      setIsLoading(true);
+      const res = await deleteProductPermanent(productId);
       message.success(res.data.message);
       router.push("/products/deleted");
     } catch (error: any) {
@@ -470,23 +491,44 @@ export default function EditProductPage() {
           </Descriptions>
 
           <Form.Item>
-            <Popconfirm
-              title="Bạn có chắc muốn khôi phục sản phẩm này?"
-              okText="Khôi phục"
-              cancelText="Hủy"
-              onConfirm={form.submit}
-              disabled={isLoading}
-            >
-              <Button
-                type="primary"
-                icon={<RollbackOutlined />}
-                className="bg-blue-500 flex items-center justify-center"
-                loading={isLoading}
+            <div className="flex gap-4 items-center">
+              <Popconfirm
+                title="Bạn có chắc muốn khôi phục sản phẩm này?"
+                okText="Khôi phục"
+                cancelText="Hủy"
+                onConfirm={form.submit}
                 disabled={isLoading}
               >
-                {isLoading ? "Đang khôi phục" : "Khôi phục"}
-              </Button>
-            </Popconfirm>
+                <Button
+                  type="primary"
+                  icon={<RollbackOutlined />}
+                  className="bg-blue-500 flex items-center justify-center mr-4"
+                  loading={isLoading}
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Đang khôi phục" : "Khôi phục"}
+                </Button>
+              </Popconfirm>
+
+              <Popconfirm
+                title="Bạn có chắc muốn xóa VĨNH VIỄN sản phẩm này?"
+                okText="Xóa"
+                cancelText="Hủy"
+                onConfirm={handleDelete}
+                disabled={isLoading}
+              >
+                <Button
+                  type="primary"
+                  icon={<DeleteOutlined />}
+                  className="bg-red-500 flex items-center justify-center"
+                  loading={isLoading}
+                  disabled={isLoading}
+                  danger
+                >
+                  {isLoading ? "Đang xóa" : "Xóa"}
+                </Button>
+              </Popconfirm>
+            </div>
           </Form.Item>
         </div>
       </Form>

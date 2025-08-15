@@ -9,6 +9,7 @@ import TagDetailModal from "./components/DetailTagModal";
 import {
   DeleteOutlined,
   EditOutlined,
+  EyeOutlined,
   PlusOutlined,
   RestOutlined,
 } from "@ant-design/icons";
@@ -105,51 +106,17 @@ const TagPage = () => {
     {
       title: "Tên Tag",
       dataIndex: "name",
-    },
-    {
-      title: "Người tạo",
-      dataIndex: "created_by",
-      render: (_: unknown, record: Size) => {
-        const profile = record.created_by?.profile;
-        return profile
-          ? `${profile.first_name} ${profile.last_name}`
-          : record.created_by?.username || "-";
-      },
-    },
-    {
-      title: "Người cập nhật",
-      dataIndex: "updated_by",
-      render: (_: unknown, record: Size) => {
-        const profile = record.updated_by?.profile;
-        return profile
-          ? `${profile.first_name} ${profile.last_name}`
-          : record.updated_by?.username || "-";
-      },
-    },
-    {
-      title: "Ngày tạo",
-      dataIndex: "created_at",
-      render: (_: unknown, record: Size) =>
-        record.created_at
-          ? new Date(record.created_at).toLocaleString("vi-VN")
-          : "-",
-    },
-    {
-      title: "Ngày cập nhật",
-      dataIndex: "updated_at",
-      render: (_: unknown, record: Size) =>
-        record.updated_at
-          ? new Date(record.updated_at).toLocaleString("vi-VN")
-          : "-",
+      align: "center",
     },
     {
       title: "Thao tác",
+      align: "center",
       render: (_: unknown, record: Size) => (
-        <div className="flex gap-2">
+        <div className="flex gap-2 justify-center">
           <Button
             type="link"
             onClick={() => setSelectedTag(record)}
-            icon={<EditOutlined />}
+            icon={<EyeOutlined />}
           />
           <Popconfirm
             title="Xác nhận xóa?"

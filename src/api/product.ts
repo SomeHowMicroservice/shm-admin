@@ -2,8 +2,19 @@
 import axiosRequest from "@/config/axios";
 import { Size, Tags } from "@/types/product";
 
-export const getAllProducts = async () => {
-  return axiosRequest.get("/admin/products");
+interface GetAllProductsParams {
+  page?: number;
+  limit?: number;
+  sort?: string;
+  order?: "asc" | "desc";
+  is_active?: boolean;
+  search?: string;
+  category_id?: string;
+  tag_id?: string;
+}
+
+export const getAllProducts = (params?: GetAllProductsParams) => {
+  return axiosRequest.get("/admin/products", { params });
 };
 
 export const getCategories = async () => {

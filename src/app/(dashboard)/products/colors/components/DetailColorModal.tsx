@@ -1,53 +1,68 @@
-"use client";
-
-import { Modal, Form, Input } from "antd";
-import { useEffect } from "react";
+import { Modal, Descriptions, Input } from "antd";
+import { useEffect, useState } from "react";
+import dayjs from "dayjs";
 import { Color } from "@/types/product";
 
-interface ISizeDetailModalProps {
-  size: Color;
+interface IColorDetailModalProps {
+  color?: Color;
   onCancel: () => void;
   onUpdate: (updated: Color) => void;
 }
 
-const DetailColorModal = ({
-  size,
+const ColorDetailModal = ({
+  color,
   onCancel,
   onUpdate,
-}: ISizeDetailModalProps) => {
-  const [form] = Form.useForm();
-
-  const handleSubmit = () => {
-    form.validateFields().then((values) => {
-      onUpdate({ ...size, ...values });
-    });
-  };
+}: IColorDetailModalProps) => {
+  const [name, setName] = useState("");
 
   useEffect(() => {
-    form.setFieldsValue(size);
-  }, [form, size]);
+    if (color) {
+      setName(color.name);
+    }
+  }, [color]);
+
+  const handleUpdate = () => {
+    if (color) {
+      onUpdate({ ...color, name });
+    }
+  };
 
   return (
     <Modal
       title="Chi tiết Màu"
-      open={!!size}
+      open={!!color}
       onCancel={onCancel}
-      onOk={handleSubmit}
+      onOk={handleUpdate}
       okText="Cập nhật"
       cancelText="Đóng"
       getContainer={false}
     >
-      <Form form={form} layout="vertical">
-        <Form.Item
-          label="Tên màu"
-          name="name"
-          rules={[{ required: true, message: "Vui lòng nhập màu" }]}
-        >
-          <Input />
-        </Form.Item>
-      </Form>
+      {color && (
+        <Descriptions bordered column={1} size="small">
+          <Descriptions.Item label="Tên color">
+            <Input value={name} onChange={(e) => setName(e.target.value)} />
+          </Descriptions.Item>
+          <Descriptions.Item label="Ngày tạo">
+            {dayjs(color.created_at).format("DD/MM/YYYY HH:mm")}
+          </Descriptions.Item>
+          <Descriptions.Item label="Người tạo">
+            {`${color.created_by?.profile?.first_name || ""} ${
+              color.created_by?.profile?.last_name || ""
+            }`}
+          </Descriptions.Item>
+          <Descriptions.Item label="Ngày cập nhật">
+            {dayjs(color.updated_at).format("DD/MM/YYYY HH:mm")}
+          </Descriptions.Item>
+          <Descriptions.Item label="Người cập nhật">
+            {`${color.updated_by?.profile?.first_name || ""} ${
+              color.updated_by?.profile?.last_name || ""
+            }`}
+          </Descriptions.Item>
+        </Descriptions>
+      )}
     </Modal>
   );
 };
 
-export default DetailColorModal;
+export default ColorDetailModal;
