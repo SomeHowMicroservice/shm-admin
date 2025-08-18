@@ -9,7 +9,7 @@ import {
   restoreSize,
   restoreSizes,
 } from "@/api/product";
-import { Button, message, Popconfirm, Space, Table } from "antd";
+import { Button, Popconfirm, Space, Table } from "antd";
 import { Size } from "@/types/product";
 import {
   BackwardOutlined,
@@ -17,6 +17,7 @@ import {
   RollbackOutlined,
 } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
+import { messageApiRef } from "@/components/layout/MessageProvider";
 
 export default function DeletedSizes() {
   const [sizes, setSizes] = useState<Size[]>([]);
@@ -30,9 +31,9 @@ export default function DeletedSizes() {
       const res = await getDeletedSizes();
       const sizeList = res?.data?.data?.sizes;
       setSizes(Array.isArray(sizeList) ? sizeList : []);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
     } catch (error: any) {
-      message.error(error?.message || "Lỗi khi tải danh sách size");
+      messageApiRef.error(error || "Lỗi khi tải danh sách size");
     } finally {
       setLoading(false);
     }
@@ -54,44 +55,44 @@ export default function DeletedSizes() {
   const handleRestore = async (id: string) => {
     try {
       const res = await restoreSize(id);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       setSelectedRowKeys([]);
       fetchDeletedSizes();
     } catch (error: any) {
-      message.error(error?.message || "Lỗi khi khôi phục");
+      messageApiRef.error(error || "Lỗi khi khôi phục");
     }
   };
 
   const handleBulkRestore = async (ids: string[]) => {
     try {
       const res = await restoreSizes(ids);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       setSelectedRowKeys([]);
       fetchDeletedSizes();
     } catch (error: any) {
-      message.error(error?.message || "Lỗi khi khôi phục hàng loạt");
+      messageApiRef.error(error || "Lỗi khi khôi phục hàng loạt");
     }
   };
 
   const handleDelete = async (id: string) => {
     try {
       const res = await deleteSizePermanent(id);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       setSelectedRowKeys([]);
       fetchDeletedSizes();
     } catch (error: any) {
-      message.error(error || "Lỗi khi xóa vĩnh viễn");
+      messageApiRef.error(error || "Lỗi khi xóa vĩnh viễn");
     }
   };
 
   const handleBulkDelete = async (ids: string[]) => {
     try {
       const res = await deleteSizesPermanent(ids);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       setSelectedRowKeys([]);
       fetchDeletedSizes();
     } catch (error: any) {
-      message.error(error || "Lỗi khi xóa vĩnh viễn hàng loạt");
+      messageApiRef.error(error || "Lỗi khi xóa vĩnh viễn hàng loạt");
     }
   };
 
@@ -111,7 +112,7 @@ export default function DeletedSizes() {
           : created_by?.username || "–",
     },
     {
-      title: "Người cập nhật",
+      title: "Người xóa",
       dataIndex: "updated_by",
       key: "updated_by",
       render: (updated_by: Size["updated_by"]) =>
@@ -135,7 +136,7 @@ export default function DeletedSizes() {
           : "–",
     },
     {
-      title: "Ngày cập nhật",
+      title: "Ngày xóa",
       dataIndex: "updated_at",
       key: "updated_at",
       render: (updated_at: string) =>
@@ -194,6 +195,9 @@ export default function DeletedSizes() {
             okText="Xóa"
             cancelText="Hủy"
             disabled={selectedRowKeys.length === 0}
+            okButtonProps={{
+              danger: true,
+            }}
           >
             <Button
               type="primary"
@@ -222,7 +226,7 @@ export default function DeletedSizes() {
               disabled={selectedRowKeys.length === 0}
             >
               {selectedRowKeys.length > 0
-                ? `Khôi phục ${selectedRowKeys.length} sản phẩm`
+                ? `Khôi phục ${selectedRowKeys.length} sizes`
                 : "Khôi phục"}
             </Button>
           </Popconfirm>

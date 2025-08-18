@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Montserrat } from "next/font/google";
 import "./globals.css";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import '@ant-design/v5-patch-for-react-19';
+import "@ant-design/v5-patch-for-react-19";
+import "antd/dist/reset.css";
+import MessageProvider from "@/components/layout/MessageProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,8 +37,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${montserrat.variable} antialiased`}
       >
-        {children}
-        <ToastContainer position="top-right" autoClose={3000} />
+        <MessageProvider>{children}</MessageProvider>
       </body>
     </html>
   );

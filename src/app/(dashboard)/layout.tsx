@@ -1,9 +1,8 @@
 "use client";
 
 import { ReactNode } from "react";
-import "react-toastify/dist/ReactToastify.css";
 import Sidebar from "@/components/ui/Sidebar";
-import "@ant-design/v5-patch-for-react-19";
+import "antd/dist/reset.css";
 
 export default function MainLayout({
   children,

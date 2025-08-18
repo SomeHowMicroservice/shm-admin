@@ -8,7 +8,6 @@ import {
   Button,
   Select,
   Switch,
-  message,
   DatePicker,
   Spin,
   UploadFile,
@@ -33,7 +32,12 @@ import {
 } from "@/api/product";
 import dayjs from "dayjs";
 import { useRouter } from "next/navigation";
-import { DeleteOutlined, RollbackOutlined } from "@ant-design/icons";
+import {
+  ArrowLeftOutlined,
+  DeleteOutlined,
+  RollbackOutlined,
+} from "@ant-design/icons";
+import { messageApiRef } from "@/components/layout/MessageProvider";
 
 export interface ProductFormValues {
   update_images: any;
@@ -194,8 +198,7 @@ export default function EditProductPage() {
       await new Promise((resolve) => setTimeout(resolve, 100));
       form.setFieldsValue(formValues);
     } catch (error: any) {
-      console.error("Error in getAndSetData:", error);
-      message.error(error?.message || "Có lỗi xảy ra khi tải dữ liệu");
+      messageApiRef.error(error || "Có lỗi xảy ra khi tải dữ liệu");
     } finally {
       setLoadingOptions(false);
     }
@@ -220,10 +223,10 @@ export default function EditProductPage() {
     try {
       setIsLoading(true);
       const res = await restoreProduct(productId);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       router.push("/products/deleted");
     } catch (error: any) {
-      message.error(error);
+      messageApiRef.error(error);
     } finally {
       setIsLoading(false);
     }
@@ -233,13 +236,17 @@ export default function EditProductPage() {
     try {
       setIsLoading(true);
       const res = await deleteProductPermanent(productId);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       router.push("/products/deleted");
     } catch (error: any) {
-      message.error(error);
+      messageApiRef.error(error);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleBack = () => {
+    router.push("/products/deleted");
   };
 
   if (loadingOptions) {
@@ -256,7 +263,18 @@ export default function EditProductPage() {
 
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white rounded shadow">
-      <h1 className="text-2xl font-bold mb-6 text-black">Chi tiết sản phẩm</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold mb-6 text-black">
+          Chi tiết sản phẩm
+        </h1>
+        <Button
+          type="primary"
+          icon={<ArrowLeftOutlined />}
+          onClick={handleBack}
+        >
+          Quay lại
+        </Button>
+      </div>
 
       <Form
         form={form}
@@ -498,6 +516,10 @@ export default function EditProductPage() {
                 cancelText="Hủy"
                 onConfirm={form.submit}
                 disabled={isLoading}
+                okButtonProps={{
+                  danger: true,
+                  loading: isLoading,
+                }}
               >
                 <Button
                   type="primary"
@@ -516,6 +538,11 @@ export default function EditProductPage() {
                 cancelText="Hủy"
                 onConfirm={handleDelete}
                 disabled={isLoading}
+                icon={<DeleteOutlined className="text-red-500" />}
+                okButtonProps={{
+                  danger: true,
+                  loading: isLoading,
+                }}
               >
                 <Button
                   type="primary"

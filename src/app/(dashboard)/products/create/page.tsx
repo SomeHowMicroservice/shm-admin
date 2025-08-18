@@ -8,7 +8,6 @@ import {
   Button,
   Select,
   Switch,
-  message,
   DatePicker,
   Spin,
   UploadFile,
@@ -26,6 +25,7 @@ import { Editor } from "@tinymce/tinymce-react";
 import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import ColorImageUpload from "./components/ColorImageUpload";
 import { toPostgresTimestamp } from "@/utils/time";
+import { messageApiRef } from "@/components/layout/MessageProvider";
 
 export interface ProductFormValues {
   title: string;
@@ -87,7 +87,7 @@ export default function CreateProductPage() {
         setTags(t.data.data.tags);
         setCategories(cat.data.data.categories);
       } catch {
-        message.error("Không thể tải thuộc tính sản phẩm");
+        messageApiRef.error("Không thể tải thuộc tính sản phẩm");
       } finally {
         setLoadingOptions(false);
       }
@@ -148,7 +148,7 @@ export default function CreateProductPage() {
       values.is_sale &&
       (!values.sale_price || !values.start_sale || !values.end_sale)
     ) {
-      message.warning("Vui lòng điền đầy đủ thông tin khuyến mãi!");
+      messageApiRef.warning("Vui lòng điền đầy đủ thông tin khuyến mãi!");
       return;
     }
 
@@ -249,11 +249,11 @@ export default function CreateProductPage() {
     try {
       setIsLoading(true);
       const res = await createProduct(formData);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       router.push(`/products/${res.data.data.product_id}`);
     } catch (error) {
       console.error(error);
-      message.error("Tạo sản phẩm thất bại");
+      messageApiRef.error("Tạo sản phẩm thất bại");
     } finally {
       setIsLoading(false);
     }
@@ -322,46 +322,6 @@ export default function CreateProductPage() {
             init={{
               height: 500,
               menubar: true,
-              plugins: [
-                "anchor",
-                "autolink",
-                "charmap",
-                "codesample",
-                "emoticons",
-                "image",
-                "link",
-                "lists",
-                "media",
-                "searchreplace",
-                "table",
-                "visualblocks",
-                "wordcount",
-                "checklist",
-                "mediaembed",
-                "casechange",
-                "formatpainter",
-                "pageembed",
-                "a11ychecker",
-                "tinymcespellchecker",
-                "permanentpen",
-                "powerpaste",
-                "advtable",
-                "advcode",
-                "editimage",
-                "advtemplate",
-                "ai",
-                "mentions",
-                "tinycomments",
-                "tableofcontents",
-                "footnotes",
-                "mergetags",
-                "typography",
-                "inlinecss",
-                "markdown",
-                "importword",
-                "exportword",
-                "exportpdf",
-              ],
               toolbar:
                 "undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table mergetags | addcomment showcomments | spellcheckdialog a11ycheck typography | align lineheight | checklist numlist bullist indent outdent | emoticons charmap | removeformat",
               tinycomments_mode: "embedded",
@@ -432,11 +392,6 @@ export default function CreateProductPage() {
               <>
                 <div className="space-y-6">
                   {fields.map(({ key, name, ...restField }) => {
-                    const currentVariant = form.getFieldValue([
-                      "variants",
-                      name,
-                    ]);
-
                     return (
                       <div
                         key={key}
@@ -449,15 +404,6 @@ export default function CreateProductPage() {
                               "variants",
                               name,
                             ]);
-                            console.log("Removing variant:", variant);
-
-                            if (variant?.id) {
-                              setDeleteVariantIds((prev) => {
-                                const newIds = [...prev, variant.id];
-                                console.log("Updated delete list:", newIds);
-                                return newIds;
-                              });
-                            }
                             remove(name);
                           }}
                           className="absolute top-2 right-2 text-red-500 hover:text-red-700 text-xl cursor-pointer"

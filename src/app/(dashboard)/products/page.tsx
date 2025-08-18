@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -6,18 +7,21 @@ import {
   Popconfirm,
   Table,
   Tag,
-  message,
   Image,
   Tooltip,
   Space,
+  Input,
+  Select,
 } from "antd";
 import { useRouter } from "next/navigation";
-import { getAllProducts } from "@/api/product";
+import { getAllProducts, deleteProduct, deleteProducts } from "@/api/product";
 import { ColumnsType } from "antd/es/table";
 import EditOutlined from "@ant-design/icons/lib/icons/EditOutlined";
 import { DeleteOutlined, PlusOutlined, RestOutlined } from "@ant-design/icons";
 import Link from "antd/es/typography/Link";
-import { deleteProduct, deleteProducts } from "@/api/product";
+import { getCategories, getTags } from "@/api/product";
+import { messageApiRef } from "@/components/layout/MessageProvider";
+import { Tags } from "@/types/product";
 
 interface Category {
   id: string;
@@ -43,6 +47,9 @@ const ProductListPage = () => {
   const [loading, setLoading] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const router = useRouter();
+
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [tags, setTags] = useState<Tags[]>([]);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [sort, setSort] = useState<string | undefined>();
@@ -51,6 +58,33 @@ const ProductListPage = () => {
   const [search, setSearch] = useState<string | undefined>();
   const [categoryId, setCategoryId] = useState<string | undefined>();
   const [tagId, setTagId] = useState<string | undefined>();
+
+  const fetchFilterData = async () => {
+    try {
+      const [catRes, tagRes] = await Promise.all([getCategories(), getTags()]);
+
+      const categoryOptions =
+        catRes?.data?.data?.categories?.map((cat: any) => ({
+          label: `${cat.name} (${cat.slug})`,
+          value: cat.id,
+        })) || [];
+
+      const tagOptions =
+        tagRes?.data?.data?.tags?.map((tag: any) => ({
+          label: tag.name,
+          value: tag.id,
+        })) || [];
+
+      setCategories(categoryOptions);
+      setTags(tagOptions);
+    } catch (error: any) {
+      messageApiRef.error(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchFilterData();
+  }, []);
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -67,7 +101,7 @@ const ProductListPage = () => {
       });
       setProducts(res.data.data.products || []);
     } catch (error: any) {
-      message.error(error);
+      messageApiRef.error(error);
     } finally {
       setLoading(false);
     }
@@ -75,29 +109,27 @@ const ProductListPage = () => {
 
   useEffect(() => {
     fetchProducts();
-  }, []);
+  }, [page, limit, sort, order, isActive, search, categoryId, tagId]);
 
   const handleDelete = async (id: string) => {
     try {
       const res = await deleteProduct(id);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       setSelectedRowKeys([]);
       fetchProducts();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      message.error(error);
+      messageApiRef.error(error);
     }
   };
 
   const handleBulkDelete = async (ids: string[]) => {
     try {
       const res = await deleteProducts(ids);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       setSelectedRowKeys([]);
       fetchProducts();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      message.error(error);
+      messageApiRef.error(error);
     }
   };
 
@@ -176,9 +208,12 @@ const ProductListPage = () => {
             onConfirm={() => handleDelete(record.id)}
             okText="Xóa"
             cancelText="Hủy"
+            okButtonProps={{
+              danger: true,
+            }}
           >
             <Button type="link" danger>
-              <DeleteOutlined size={26} />
+              <DeleteOutlined />
             </Button>
           </Popconfirm>
         </Space>
@@ -188,6 +223,7 @@ const ProductListPage = () => {
 
   return (
     <div className="p-6 bg-white rounded shadow">
+      {/* Nút thao tác */}
       <div className="flex justify-between mb-5">
         <Space>
           <Button
@@ -206,6 +242,9 @@ const ProductListPage = () => {
             okText="Xóa"
             cancelText="Hủy"
             disabled={selectedRowKeys.length === 0}
+            okButtonProps={{
+              danger: true,
+            }}
           >
             <Button
               type="primary"
@@ -229,12 +268,81 @@ const ProductListPage = () => {
         </Button>
       </div>
 
+      <div className="flex-wrap gap-4 mb-5 flex justify-between">
+        <Input.Search
+          placeholder="Tìm kiếm sản phẩm..."
+          allowClear
+          onSearch={(value) => {
+            setSearch(value || undefined);
+            setPage(1);
+          }}
+          style={{ width: 350 }}
+        />
+
+        <div className="flex gap-2">
+          <Select
+            placeholder="Trạng thái"
+            allowClear
+            style={{ width: 150 }}
+            onChange={(value) => {
+              setIsActive(value === undefined ? undefined : value === "true");
+              setPage(1);
+            }}
+          >
+            <Select.Option value="true">Đang bán</Select.Option>
+            <Select.Option value="false">Ngừng bán</Select.Option>
+          </Select>
+
+          <Select
+            placeholder="Danh mục"
+            allowClear
+            style={{ width: 180 }}
+            onChange={(value) => {
+              setCategoryId(value || undefined);
+              setPage(1);
+            }}
+            options={categories}
+          />
+
+          <Select
+            placeholder="Sắp xếp theo"
+            allowClear
+            style={{ width: 200 }}
+            onChange={(value) => {
+              if (!value) {
+                setSort(undefined);
+                setOrder(undefined);
+              } else {
+                const [s, o] = value.split("|");
+                setSort(s);
+                setOrder(o as "asc" | "desc");
+              }
+              setPage(1);
+            }}
+            options={[
+              { label: "Tên A-Z", value: "title|asc" },
+              { label: "Tên Z-A", value: "title|desc" },
+              { label: "Giá thấp → cao", value: "price|asc" },
+              { label: "Giá cao → thấp", value: "price|desc" },
+            ]}
+          />
+        </div>
+      </div>
+
+      {/* Bảng */}
       <Table
         rowKey="id"
         columns={columns}
         dataSource={products}
         loading={loading}
-        pagination={{ pageSize: 10 }}
+        pagination={{
+          current: page,
+          pageSize: limit,
+          onChange: (p, l) => {
+            setPage(p);
+            setLimit(l);
+          },
+        }}
         rowSelection={rowSelection}
       />
     </div>

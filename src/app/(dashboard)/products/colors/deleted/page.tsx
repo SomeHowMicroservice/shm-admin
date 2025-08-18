@@ -1,15 +1,14 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { Button, Table, Modal, message, Popconfirm, Space } from "antd";
+import { Button, Table, Popconfirm, Space } from "antd";
 import { useEffect, useState } from "react";
-import { Color, Size } from "@/types/product";
+import { Size } from "@/types/product";
 import {
   BackwardOutlined,
   DeleteOutlined,
-  PlusOutlined,
   RollbackOutlined,
 } from "@ant-design/icons";
-import { toast } from "react-toastify";
 import {
   deleteColorPermanent,
   deleteColorsPermanent,
@@ -18,6 +17,7 @@ import {
   restoreColors,
 } from "@/api/product";
 import { useRouter } from "next/navigation";
+import { messageApiRef } from "@/components/layout/MessageProvider";
 
 const SizePage = () => {
   const router = useRouter();
@@ -30,9 +30,8 @@ const SizePage = () => {
     try {
       const res = await getDeletedColors();
       setSizes(res.data.data.colors);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      message.error(error);
+      messageApiRef.error(error);
     } finally {
       setLoading(false);
     }
@@ -46,10 +45,9 @@ const SizePage = () => {
     try {
       const res = await restoreColor(id);
       fetchDeletedColors();
-      message.success(res.data.message);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      messageApiRef.success(res.data.message);
     } catch (error: any) {
-      message.error(error);
+      messageApiRef.error(error);
     }
   };
 
@@ -58,32 +56,31 @@ const SizePage = () => {
       const res = await restoreColors(selectedRowKeys as string[]);
       setSelectedRowKeys([]);
       fetchDeletedColors();
-      toast.success(res.data.message);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      messageApiRef.success(res.data.message);
     } catch (error: any) {
-      toast.error(error);
+      messageApiRef.error(error);
     }
   };
 
   const handleDelete = async (id: string) => {
     try {
       const res = await deleteColorPermanent(id);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       setSelectedRowKeys([]);
       fetchDeletedColors();
     } catch (error: any) {
-      message.error(error || "Lỗi khi xóa vĩnh viễn");
+      messageApiRef.error(error || "Lỗi khi xóa vĩnh viễn");
     }
   };
 
   const handleBulkDelete = async (ids: string[]) => {
     try {
       const res = await deleteColorsPermanent(ids);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       setSelectedRowKeys([]);
       fetchDeletedColors();
     } catch (error: any) {
-      message.error(error || "Lỗi khi xóa vĩnh viễn hàng loạt");
+      messageApiRef.error(error || "Lỗi khi xóa vĩnh viễn hàng loạt");
     }
   };
 
@@ -110,7 +107,7 @@ const SizePage = () => {
       },
     },
     {
-      title: "Người cập nhật",
+      title: "Người xóa",
       dataIndex: "updated_by",
       render: (_: unknown, record: Size) => {
         const profile = record.updated_by?.profile;
@@ -128,7 +125,7 @@ const SizePage = () => {
           : "-",
     },
     {
-      title: "Ngày cập nhật",
+      title: "Ngày xóa",
       dataIndex: "updated_at",
       render: (_: unknown, record: Size) =>
         record.updated_at
@@ -177,6 +174,9 @@ const SizePage = () => {
             okText="Xóa"
             cancelText="Hủy"
             disabled={selectedRowKeys.length === 0}
+            okButtonProps={{
+              danger: true,
+            }}
           >
             <Button
               type="primary"
@@ -196,6 +196,9 @@ const SizePage = () => {
             okText="Khôi phục"
             cancelText="Hủy"
             disabled={selectedRowKeys.length === 0}
+            okButtonProps={{
+              danger: true,
+            }}
           >
             <Button
               type="primary"

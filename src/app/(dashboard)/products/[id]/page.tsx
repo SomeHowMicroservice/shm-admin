@@ -39,6 +39,7 @@ import {
 import isEqual from "lodash/isEqual";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
+import { messageApiRef } from "@/components/layout/MessageProvider";
 
 export interface ProductFormValues {
   update_images: any;
@@ -112,15 +113,10 @@ export default function EditProductPage() {
   const fetchProductDetail = async () => {
     try {
       const res = await getProductById(productId);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       setProduct(res.data.data.product);
     } catch (error: any) {
-      const errorMessage =
-        error?.response?.data?.message ||
-        error?.message ||
-        error?.toString() ||
-        "Failed to fetch product";
-      message.error(errorMessage);
+      messageApiRef.error(error);
     }
   };
 
@@ -289,17 +285,10 @@ export default function EditProductPage() {
             _index: index,
           })),
         };
-
-        console.log("Setting form values:", formValues);
         form.setFieldsValue(formValues);
       }, 100);
     } catch (error: any) {
-      const errorMessage =
-        error?.response?.data?.message ||
-        error?.message ||
-        error?.toString() ||
-        "Failed to load data";
-      message.error(errorMessage);
+      messageApiRef.error(error);
     } finally {
       setLoadingOptions(false);
     }
@@ -663,17 +652,12 @@ export default function EditProductPage() {
     try {
       setIsLoading(true);
       const res = await updateProduct(productId, formData);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       setDeletedImageIds([]);
       setDeleteVariantIds([]);
       await fetchProductDetail();
     } catch (error: any) {
-      const errorMessage =
-        error?.response?.data?.message ||
-        error?.message ||
-        error?.toString() ||
-        "Update failed";
-      message.error(errorMessage);
+      messageApiRef.error(error);
     } finally {
       setIsLoading(false);
     }
@@ -802,46 +786,6 @@ export default function EditProductPage() {
             init={{
               height: 400,
               menubar: true,
-              plugins: [
-                "anchor",
-                "autolink",
-                "charmap",
-                "codesample",
-                "emoticons",
-                "image",
-                "link",
-                "lists",
-                "media",
-                "searchreplace",
-                "table",
-                "visualblocks",
-                "wordcount",
-                "checklist",
-                "mediaembed",
-                "casechange",
-                "formatpainter",
-                "pageembed",
-                "a11ychecker",
-                "tinymcespellchecker",
-                "permanentpen",
-                "powerpaste",
-                "advtable",
-                "advcode",
-                "editimage",
-                "advtemplate",
-                "ai",
-                "mentions",
-                "tinycomments",
-                "tableofcontents",
-                "footnotes",
-                "mergetags",
-                "typography",
-                "inlinecss",
-                "markdown",
-                "importword",
-                "exportword",
-                "exportpdf",
-              ],
               toolbar:
                 "undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table mergetags | addcomment showcomments | spellcheckdialog a11ycheck typography | align lineheight | checklist numlist bullist indent outdent | emoticons charmap | removeformat",
               tinycomments_mode: "embedded",

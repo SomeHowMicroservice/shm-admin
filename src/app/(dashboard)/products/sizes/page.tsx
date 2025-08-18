@@ -1,14 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { Button, Table, message, Popconfirm, Space } from "antd";
+import { Button, Table, Popconfirm, Space } from "antd";
 import { useEffect, useState } from "react";
 import SizeCreateModal from "./components/SizeCreateModal";
 import SizeDetailModal from "./components/SizeDetailModal";
 import { Size } from "@/types/product";
+import "antd/dist/reset.css";
+import { messageApiRef } from "@/components/layout/MessageProvider";
 import {
   DeleteOutlined,
-  EditOutlined,
   EyeOutlined,
   PlusOutlined,
   RestOutlined,
@@ -21,6 +22,7 @@ import {
   deleteSize,
 } from "@/api/product";
 import { useRouter } from "next/navigation";
+import { ColumnsType } from "antd/es/table";
 
 const SizePage = () => {
   const router = useRouter();
@@ -38,7 +40,7 @@ const SizePage = () => {
       const res = await getSizes();
       setSizes(res.data.data.sizes);
     } catch (error: any) {
-      message.error(error);
+      messageApiRef.error(error);
     } finally {
       setLoading(false);
     }
@@ -51,11 +53,12 @@ const SizePage = () => {
   const handleCreate = async (data: Size) => {
     try {
       const res = await createSize(data);
-      message.success(res.data.message);
+      messageApiRef?.success(res.data.message);
+      console.log(res.data.message);
       setCreateOpen(false);
       fetchSizes();
     } catch (error: any) {
-      message.error(error);
+      messageApiRef.error(error);
     }
   };
 
@@ -63,20 +66,20 @@ const SizePage = () => {
     try {
       const res = await updateSize(updated.id, { name: updated.name });
       setSelectedSize(null);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       fetchSizes();
     } catch (error: any) {
-      message.error(error);
+      messageApiRef.error(error);
     }
   };
 
   const handleDelete = async (id: string) => {
     try {
       const res = await deleteSize(id);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       fetchSizes();
     } catch (error: any) {
-      message.error(error);
+      messageApiRef.error(error);
     }
   };
 
@@ -90,16 +93,15 @@ const SizePage = () => {
   const handleBulkDelete = async (ids: string[]) => {
     try {
       const res = await deleteSizes(ids);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       setSelectedRowKeys([]);
       fetchSizes();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      message.error(error);
+      messageApiRef.error(error);
     }
   };
 
-  const columns = [
+  const columns: ColumnsType<Size> = [
     {
       title: "Tên size",
       dataIndex: "name",
@@ -155,6 +157,9 @@ const SizePage = () => {
             okText="Xóa"
             cancelText="Hủy"
             disabled={selectedRowKeys.length === 0}
+            okButtonProps={{
+              danger: true,
+            }}
           >
             <Button
               type="primary"

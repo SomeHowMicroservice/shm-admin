@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -7,7 +8,6 @@ import {
   Descriptions,
   Spin,
   Button,
-  message,
   Form,
   Input,
   Select,
@@ -18,6 +18,7 @@ import { ProductModal } from "../components/ProductModal";
 import { Product } from "../components/ProductModal";
 import { deleteCategory, updateCategory } from "@/api/product";
 import { ExclamationCircleOutlined } from "@ant-design/icons";
+import { messageApiRef } from "@/components/layout/MessageProvider";
 
 const { Option } = Select;
 
@@ -80,8 +81,8 @@ const CategoryDetailPage = () => {
             (p: { name: string; id: string }) => p.id
           ),
         });
-      } catch {
-        message.error("Không thể tải dữ liệu chi tiết danh mục");
+      } catch (error: any) {
+        messageApiRef.error(error);
       } finally {
         setLoading(false);
       }
@@ -95,8 +96,8 @@ const CategoryDetailPage = () => {
       try {
         const res = await axiosRequest.get("/admin/categories");
         setAllCategories(res.data.data.categories || []);
-      } catch {
-        message.error("Không thể tải danh sách danh mục cha");
+      } catch (error: any) {
+        messageApiRef.error(error);
       }
     };
 
@@ -116,11 +117,10 @@ const CategoryDetailPage = () => {
         parent_ids: values.parent_ids,
       });
 
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       router.refresh();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      message.error(error.message);
+      messageApiRef.error(error);
     } finally {
       setUpdating(false);
     }
@@ -130,12 +130,11 @@ const CategoryDetailPage = () => {
     try {
       if (id) {
         const res = await deleteCategory(id.toString());
-        message.success(res.data.message);
+        messageApiRef.success(res.data.message);
         router.push("/products/categories");
       }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      message.error(error);
+      messageApiRef.error(error);
     }
   };
 

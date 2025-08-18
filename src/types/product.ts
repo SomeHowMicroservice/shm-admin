@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { File } from "buffer";
 
 type CreatedBy = {
@@ -64,14 +65,11 @@ export interface Product {
   variants: never[];
   tags: never[];
   description: string;
-  end_sale: undefined;
   end_sale: any;
   start_sale: any;
-  start_sale: undefined;
-  is_active: any;
-  is_sale: any;
-  sale_price: any;
-  sale_price: undefined;
+  is_active: boolean;
+  is_sale: boolean;
+  sale_price: number;
   updated_by: any;
   updated_at: string | number | Date;
   created_at: string | number | Date;
@@ -89,9 +87,10 @@ export interface Product {
 }
 
 export interface Category {
-  slug: ReactNode;
+  slug: string;
   id: string;
   name: string;
+  children: Category[];
 }
 
 export interface Inventory {

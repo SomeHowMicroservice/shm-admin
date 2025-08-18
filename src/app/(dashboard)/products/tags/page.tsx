@@ -1,14 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { Button, Table, Modal, Space, Popconfirm, message } from "antd";
+import { Button, Table, Space, Popconfirm } from "antd";
 import { useEffect, useState } from "react";
 import { Size, Tags } from "@/types/product";
 import TagCreateModal from "./components/CreateTagModal";
 import TagDetailModal from "./components/DetailTagModal";
 import {
   DeleteOutlined,
-  EditOutlined,
   EyeOutlined,
   PlusOutlined,
   RestOutlined,
@@ -22,6 +21,7 @@ import {
   deleteTag,
 } from "@/api/product";
 import { useRouter } from "next/navigation";
+import { messageApiRef } from "@/components/layout/MessageProvider";
 
 const TagPage = () => {
   const router = useRouter();
@@ -38,7 +38,7 @@ const TagPage = () => {
       const res = await getTags();
       setSizes(res.data.data.tags);
     } catch (error: any) {
-      message.error(error);
+      messageApiRef.error(error);
     } finally {
       setLoading(false);
     }
@@ -55,7 +55,7 @@ const TagPage = () => {
       setCreateOpen(false);
       fetchTags();
     } catch (error: any) {
-      message.error(error);
+      messageApiRef.error(error);
     }
   };
 
@@ -63,24 +63,20 @@ const TagPage = () => {
     try {
       const res = await updateTag(updated.id, { name: updated.name });
       setSelectedTag(null);
-      toast.success(res.data.message);
+      messageApiRef.success(res.data.message);
       fetchTags();
     } catch (error) {
-      const errorMessage =
-        typeof error === "object" && error !== null && "message" in error
-          ? (error as { message: string }).message
-          : "Cập nhật màu thất bại";
-      toast.error(errorMessage);
+      messageApiRef.error(error);
     }
   };
 
   const handleDelete = async (id: string) => {
     try {
       const res = await deleteTag(id);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       fetchTags();
-    } catch (error: any) {
-      message.error(error);
+    } catch (error) {
+      messageApiRef.error(error);
     }
   };
 
@@ -94,11 +90,11 @@ const TagPage = () => {
   const handleBulkDelete = async (ids: string[]) => {
     try {
       const res = await deleteTags(ids);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       setSelectedRowKeys([]);
       fetchTags();
     } catch (error: any) {
-      message.error(error);
+      messageApiRef.error(error);
     }
   };
 
@@ -155,6 +151,9 @@ const TagPage = () => {
             okText="Xóa"
             cancelText="Hủy"
             disabled={selectedRowKeys.length === 0}
+            okButtonProps={{
+              danger: true,
+            }}
           >
             <Button
               type="primary"

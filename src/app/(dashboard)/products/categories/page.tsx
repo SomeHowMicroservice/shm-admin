@@ -1,13 +1,25 @@
 "use client";
 
-import { Button, Popconfirm, Space, Table, message } from "antd";
+import { Button, Popconfirm, Space, Table } from "antd";
 import { ColumnsType } from "antd/es/table";
 import { useEffect, useState } from "react";
-import { DeleteOutlined, ExclamationCircleOutlined, PlusOutlined } from "@ant-design/icons";
+import {
+  DeleteOutlined,
+  ExclamationCircleOutlined,
+  PlusOutlined,
+} from "@ant-design/icons";
 import { useRouter } from "next/navigation";
-import { deleteCategories, deleteCategory, getCategories } from "@/api/product";
+import {
+  deleteCategories,
+  deleteCategory,
+  getCategories,
+  getCategoryTree,
+} from "@/api/product";
 import { toast } from "react-toastify";
 import Link from "antd/es/typography/Link";
+import { messageApiRef } from "@/components/layout/MessageProvider";
+import { IoMapOutline } from "react-icons/io5";
+import CategoryMindmapModal from "./components/CategoryTreeModal";
 
 interface Category {
   id: string;
@@ -26,11 +38,17 @@ const CategoryPage = () => {
     total: 0,
   });
 
+  const [isCategoryTreeModalOpen, setIsCategoryTreeModalOpen] =
+    useState<boolean>(false);
+  const [categoryTree, setCategoryTree] = useState<Category[]>([]);
+
   const fetchCategories = async (page = 1, pageSize = 10) => {
     try {
       setLoading(true);
       const res = await getCategories();
+      const res2 = await getCategoryTree();
       setCategories(res.data.data.categories);
+      setCategoryTree(res2.data.data.categories);
       setPagination({ current: page, pageSize, total: res.data.total });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error));
@@ -42,23 +60,23 @@ const CategoryPage = () => {
   const handleDelete = async (id: string) => {
     try {
       const res = await deleteCategory(id);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       fetchCategories(pagination.current, pagination.pageSize);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      message.error(error);
+      messageApiRef.error(error);
     }
   };
 
   const handleBulkDelete = async (ids: string[]) => {
     try {
       const res = await deleteCategories(ids);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       setSelectedRowKeys([]);
       fetchCategories(pagination.current, pagination.pageSize);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      message.error(error);
+      messageApiRef.error(error);
     }
   };
 
@@ -93,6 +111,9 @@ const CategoryPage = () => {
         <Popconfirm
           title="Xác nhận xóa danh mục này?"
           onConfirm={() => handleDelete(record.id)}
+          okButtonProps={{
+            danger: true,
+          }}
           icon={<ExclamationCircleOutlined style={{ color: "red" }} />}
         >
           <Button type="link" danger icon={<DeleteOutlined />} />
@@ -112,6 +133,14 @@ const CategoryPage = () => {
           Tạo mới
         </Button>
 
+        <Button
+          type="primary"
+          icon={<IoMapOutline />}
+          onClick={() => setIsCategoryTreeModalOpen(true)}
+        >
+          Xem sơ đồ danh mục
+        </Button>
+
         <Popconfirm
           title={`Bạn có chắc muốn xóa ${selectedRowKeys.length} danh mục này?`}
           onConfirm={() =>
@@ -119,6 +148,9 @@ const CategoryPage = () => {
           }
           okText="Xóa"
           cancelText="Hủy"
+          okButtonProps={{
+            danger: true,
+          }}
         >
           <Button
             type="primary"
@@ -144,6 +176,12 @@ const CategoryPage = () => {
           onChange: (page, pageSize) => fetchCategories(page, pageSize),
         }}
         scroll={{ x: 500 }}
+      />
+
+      <CategoryMindmapModal
+        initialData={categoryTree}
+        open={isCategoryTreeModalOpen}
+        onClose={() => setIsCategoryTreeModalOpen(false)}
       />
     </div>
   );

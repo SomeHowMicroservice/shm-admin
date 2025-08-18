@@ -9,7 +9,7 @@ import {
   restoreTag,
   restoreTags,
 } from "@/api/product";
-import { Button, message, Popconfirm, Space, Table } from "antd";
+import { Button, Popconfirm, Space, Table } from "antd";
 import { Size } from "@/types/product";
 import {
   BackwardOutlined,
@@ -17,6 +17,7 @@ import {
   RollbackOutlined,
 } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
+import { messageApiRef } from "@/components/layout/MessageProvider";
 
 export default function DeletedTags() {
   const [sizes, setSizes] = useState<Size[]>([]);
@@ -30,9 +31,9 @@ export default function DeletedTags() {
       const res = await getDeletedTags();
       const tagList = res?.data?.data?.tags;
       setSizes(Array.isArray(tagList) ? tagList : []);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
     } catch (error: any) {
-      message.error(error);
+      messageApiRef.error(error);
     } finally {
       setLoading(false);
     }
@@ -54,44 +55,44 @@ export default function DeletedTags() {
   const handleRestore = async (id: string) => {
     try {
       const res = await restoreTag(id);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       setSelectedRowKeys([]);
       fetchDeletedTags();
     } catch (error: any) {
-      message.error(error || "Lỗi khi khôi phục");
+      messageApiRef.error(error || "Lỗi khi khôi phục");
     }
   };
 
   const handleBulkRestore = async (ids: string[]) => {
     try {
       const res = await restoreTags(ids);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       setSelectedRowKeys([]);
       fetchDeletedTags();
     } catch (error: any) {
-      message.error(error || "Lỗi khi khôi phục hàng loạt");
+      messageApiRef.error(error || "Lỗi khi khôi phục hàng loạt");
     }
   };
 
   const handleDelete = async (id: string) => {
     try {
       const res = await deleteTagPermanent(id);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       setSelectedRowKeys([]);
       fetchDeletedTags();
     } catch (error: any) {
-      message.error(error || "Lỗi khi xóa vĩnh viễn");
+      messageApiRef.error(error || "Lỗi khi xóa vĩnh viễn");
     }
   };
 
   const handleBulkDelete = async (ids: string[]) => {
     try {
       const res = await deleteTagsPermanent(ids);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       setSelectedRowKeys([]);
       fetchDeletedTags();
     } catch (error: any) {
-      message.error(error || "Lỗi khi xóa vĩnh viễn hàng loạt");
+      messageApiRef.error(error || "Lỗi khi xóa vĩnh viễn hàng loạt");
     }
   };
 
@@ -100,6 +101,42 @@ export default function DeletedTags() {
       title: "Tên tag",
       dataIndex: "name",
       key: "name",
+    },
+    {
+      title: "Người tạo",
+      dataIndex: "created_by",
+      render: (_: unknown, record: Size) => {
+        const profile = record.created_by?.profile;
+        return profile
+          ? `${profile.first_name} ${profile.last_name}`
+          : record.created_by?.username || "-";
+      },
+    },
+    {
+      title: "Người xóa",
+      dataIndex: "updated_by",
+      render: (_: unknown, record: Size) => {
+        const profile = record.updated_by?.profile;
+        return profile
+          ? `${profile.first_name} ${profile.last_name}`
+          : record.updated_by?.username || "-";
+      },
+    },
+    {
+      title: "Ngày tạo",
+      dataIndex: "created_at",
+      render: (_: unknown, record: Size) =>
+        record.created_at
+          ? new Date(record.created_at).toLocaleString("vi-VN")
+          : "-",
+    },
+    {
+      title: "Ngày xóa",
+      dataIndex: "updated_at",
+      render: (_: unknown, record: Size) =>
+        record.updated_at
+          ? new Date(record.updated_at).toLocaleString("vi-VN")
+          : "-",
     },
     {
       title: "Thao tác",
@@ -146,6 +183,9 @@ export default function DeletedTags() {
             okText="Xóa"
             cancelText="Hủy"
             disabled={selectedRowKeys.length === 0}
+            okButtonProps={{
+              danger: true,
+            }}
           >
             <Button
               type="primary"

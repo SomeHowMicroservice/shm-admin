@@ -21,6 +21,10 @@ export const getCategories = async () => {
   return axiosRequest.get("/admin/categories");
 };
 
+export const getCategoryTree = async () => {
+  return axiosRequest.get("/categories/tree")
+};
+
 export const createCategory = (data: { name: string; slug?: string }) => {
   return axiosRequest.post("/admin/categories", data);
 };
@@ -206,8 +210,8 @@ export const deleteTagsPermanent = (ids: string[]) => {
   });
 };
 
-export const getDeletedProduct = () => {
-  return axiosRequest.get("/admin/products/deleted");
+export const getDeletedProduct = (params?: GetAllProductsParams) => {
+  return axiosRequest.get("/admin/products/deleted", { params });
 };
 
 export const getDeletedProductDetail = (id: string) => {

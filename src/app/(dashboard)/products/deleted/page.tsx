@@ -1,15 +1,18 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useEffect, useState } from "react";
 import {
   deleteProductPermanent,
   deleteProductsPermanent,
+  getCategories,
   getDeletedProduct,
+  getTags,
   restoreProduct,
   restoreProducts,
 } from "@/api/product";
-import { Button, message, Popconfirm, Space, Tag, Tooltip } from "antd";
-import { Category, Product } from "@/types/product";
+import { Button, Input, Popconfirm, Select, Space, Tag, Tooltip } from "antd";
+import { Category, Product, Tags } from "@/types/product";
 import Link from "antd/es/typography/Link";
 import { Image } from "antd";
 import Table, { ColumnsType } from "antd/es/table";
@@ -19,22 +22,70 @@ import {
   RollbackOutlined,
 } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
+import { messageApiRef } from "@/components/layout/MessageProvider";
 
 export default function DeletedProduct() {
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
 
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [tags, setTags] = useState<Tags[]>([]);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [sort, setSort] = useState<string | undefined>();
+  const [order, setOrder] = useState<"asc" | "desc" | undefined>();
+  const [isActive, setIsActive] = useState<boolean | undefined>();
+  const [search, setSearch] = useState<string | undefined>();
+  const [categoryId, setCategoryId] = useState<string | undefined>();
+  const [tagId, setTagId] = useState<string | undefined>();
+
+  const fetchFilterData = async () => {
+    try {
+      const [catRes, tagRes] = await Promise.all([getCategories(), getTags()]);
+
+      const categoryOptions =
+        catRes?.data?.data?.categories?.map((cat: any) => ({
+          label: `${cat.name} (${cat.slug})`,
+          value: cat.id,
+        })) || [];
+
+      const tagOptions =
+        tagRes?.data?.data?.tags?.map((tag: any) => ({
+          label: tag.name,
+          value: tag.id,
+        })) || [];
+
+      setCategories(categoryOptions);
+      setTags(tagOptions);
+    } catch (error: any) {
+      messageApiRef.error(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchFilterData();
+  }, []);
+
   const fetchDeletedProduct = async () => {
     try {
       setLoading(true);
-      const res = await getDeletedProduct();
+      const res = await getDeletedProduct({
+        page,
+        limit,
+        sort,
+        order,
+        is_active: isActive,
+        search,
+        category_id: categoryId,
+        tag_id: tagId,
+      });
       const productList = res?.data?.data?.products;
       setProducts(Array.isArray(productList) ? productList : []);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      message.error(error);
+      messageApiRef.error(error);
     } finally {
       setLoading(false);
     }
@@ -42,7 +93,7 @@ export default function DeletedProduct() {
 
   useEffect(() => {
     fetchDeletedProduct();
-  }, []);
+  }, [page, limit, sort, order, isActive, search, categoryId, tagId]);
 
   const router = useRouter();
 
@@ -56,48 +107,44 @@ export default function DeletedProduct() {
   const handleRestore = async (id: string) => {
     try {
       const res = await restoreProduct(id);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       setSelectedRowKeys([]);
       fetchDeletedProduct();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      message.error(error);
+      messageApiRef.error(error);
     }
   };
 
   const handleBulkRestore = async (ids: string[]) => {
     try {
       const res = await restoreProducts(ids);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       setSelectedRowKeys([]);
       fetchDeletedProduct();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      message.error(error.message);
+      messageApiRef.error(error.message);
     }
   };
 
   const handleDelete = async (id: string) => {
     try {
       const res = await deleteProductPermanent(id);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       setSelectedRowKeys([]);
       fetchDeletedProduct();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      message.error(error);
+      messageApiRef.error(error);
     }
   };
 
   const handleBulkDelete = async (ids: string[]) => {
     try {
       const res = await deleteProductsPermanent(ids);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       setSelectedRowKeys([]);
       fetchDeletedProduct();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      message.error(error);
+      messageApiRef.error(error);
     }
   };
 
@@ -169,6 +216,9 @@ export default function DeletedProduct() {
             onConfirm={() => handleDelete(record.id)}
             okText="Xóa"
             cancelText="Hủy"
+            okButtonProps={{
+              danger: true,
+            }}
           >
             <Button type="link" danger>
               <DeleteOutlined style={{ fontSize: 18 }} />
@@ -199,6 +249,9 @@ export default function DeletedProduct() {
             okText="Xóa"
             cancelText="Hủy"
             disabled={selectedRowKeys.length === 0}
+            okButtonProps={{
+              danger: true,
+            }}
           >
             <Button
               type="primary"
@@ -232,6 +285,67 @@ export default function DeletedProduct() {
             </Button>
           </Popconfirm>
         </Space>
+      </div>
+
+      <div className="flex-wrap gap-4 mb-5 flex justify-between">
+        <Input.Search
+          placeholder="Tìm kiếm sản phẩm..."
+          allowClear
+          onSearch={(value) => {
+            setSearch(value || undefined);
+            setPage(1);
+          }}
+          style={{ width: 350 }}
+        />
+
+        <div className="flex gap-2">
+          <Select
+            placeholder="Trạng thái"
+            allowClear
+            style={{ width: 150 }}
+            onChange={(value) => {
+              setIsActive(value === undefined ? undefined : value === "true");
+              setPage(1);
+            }}
+          >
+            <Select.Option value="true">Đang bán</Select.Option>
+            <Select.Option value="false">Ngừng bán</Select.Option>
+          </Select>
+
+          <Select
+            placeholder="Danh mục"
+            allowClear
+            style={{ width: 180 }}
+            onChange={(value) => {
+              setCategoryId(value || undefined);
+              setPage(1);
+            }}
+            options={categories}
+          />
+
+          <Select
+            placeholder="Sắp xếp theo"
+            allowClear
+            style={{ width: 200 }}
+            onChange={(value) => {
+              if (!value) {
+                setSort(undefined);
+                setOrder(undefined);
+              } else {
+                const [s, o] = value.split("|");
+                setSort(s);
+                setOrder(o as "asc" | "desc");
+              }
+              setPage(1);
+            }}
+            options={[
+              { label: "Tên A-Z", value: "title|asc" },
+              { label: "Tên Z-A", value: "title|desc" },
+              { label: "Giá thấp → cao", value: "price|asc" },
+              { label: "Giá cao → thấp", value: "price|desc" },
+            ]}
+          />
+        </div>
       </div>
 
       <Table

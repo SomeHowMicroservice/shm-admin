@@ -1,14 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { Button, Table, Popconfirm, Space, message } from "antd";
+import { Button, Table, Popconfirm, Space } from "antd";
 import { useEffect, useState } from "react";
 import CreateColorModal from "./components/CreateColorModal";
 import DetailColorModal from "./components/DetailColorModal";
 import { Size } from "@/types/product";
 import {
   DeleteOutlined,
-  EditOutlined,
   EyeOutlined,
   PlusOutlined,
   RestOutlined,
@@ -21,6 +20,7 @@ import {
   deleteColors,
 } from "@/api/product";
 import { useRouter } from "next/navigation";
+import { messageApiRef } from "@/components/layout/MessageProvider";
 
 const SizePage = () => {
   const [sizes, setSizes] = useState<Size[]>([]);
@@ -37,9 +37,8 @@ const SizePage = () => {
     try {
       const res = await getColors();
       setSizes(res.data.data.colors);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      message.error(error);
+      messageApiRef.error(error);
     } finally {
       setLoading(false);
     }
@@ -52,11 +51,11 @@ const SizePage = () => {
   const handleCreate = async (data: Size) => {
     try {
       const res = await createColor(data);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       setCreateOpen(false);
       fetchColors();
     } catch (error: any) {
-      message.error(error);
+      messageApiRef.error(error);
     }
   };
 
@@ -64,19 +63,19 @@ const SizePage = () => {
     try {
       const res = await updateColor(updated.id, { name: updated.name });
       setSelectedColor(null);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       fetchColors();
     } catch (error: any) {
-      message.error(error);
+      messageApiRef.error(error);
     }
   };
   const handleDelete = async (id: string) => {
     try {
       const res = await deleteColor(id);
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       fetchColors();
     } catch (error: any) {
-      message.error(error);
+      messageApiRef.error(error);
     }
   };
 
@@ -85,11 +84,11 @@ const SizePage = () => {
       const res = await deleteColors(
         selectedRowKeys.map((id) => id.toString())
       );
-      message.success(res.data.message);
+      messageApiRef.success(res.data.message);
       setSelectedRowKeys([]);
       fetchColors();
     } catch (error: any) {
-      message.error(error);
+      messageApiRef.error(error);
     }
   };
 
@@ -150,6 +149,9 @@ const SizePage = () => {
             okText="Xóa"
             cancelText="Hủy"
             disabled={selectedRowKeys.length === 0}
+            okButtonProps={{
+              danger: true,
+            }}
           >
             <Button
               type="primary"
