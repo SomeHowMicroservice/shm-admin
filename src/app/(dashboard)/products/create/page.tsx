@@ -10,8 +10,10 @@ import {
   Switch,
   DatePicker,
   Spin,
-  UploadFile,
+  UploadFile as AntdUploadFile,
+  message,
 } from "antd";
+
 import { useRouter } from "next/navigation";
 import {
   createProduct,
@@ -23,7 +25,9 @@ import {
 import { Category, Color, Size, Tags } from "@/types/product";
 import { Editor } from "@tinymce/tinymce-react";
 import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
-import ColorImageUpload from "./components/ColorImageUpload";
+import ColorImageUpload, {
+  CustomUploadFile,
+} from "./components/ColorImageUpload";
 import { toPostgresTimestamp } from "@/utils/time";
 import { messageApiRef } from "@/components/layout/MessageProvider";
 
@@ -46,7 +50,7 @@ export interface ProductFormValues {
     quantity: number;
     size: string;
     color: string;
-    images?: UploadFile[];
+    images?: CustomUploadFile[];
   }>;
 }
 
@@ -67,11 +71,11 @@ export default function CreateProductPage() {
   const [description, setDescription] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isActive, setIsActive] = useState<boolean>(true);
-  const [productId, setProductId] = useState<string>();
+  const [isHaveThumbnail, setIsHaveThumbnail] = useState(false);
 
-  const [colorImages, setColorImages] = useState<Record<string, UploadFile[]>>(
-    {}
-  );
+  const [colorImages, setColorImages] = useState<
+    Record<string, CustomUploadFile[]>
+  >({});
 
   useEffect(() => {
     const fetchOptions = async () => {
@@ -98,7 +102,7 @@ export default function CreateProductPage() {
 
   const handleColorImageChange = (
     colorName: string,
-    info: { fileList: UploadFile[] }
+    info: { fileList: CustomUploadFile[] }
   ) => {
     setColorImages((prev: any) => {
       const uniqueFiles = Array.from(
@@ -118,6 +122,7 @@ export default function CreateProductPage() {
   };
 
   const handleSetThumbnail = (colorName: string, uid: string) => {
+    setIsHaveThumbnail(true);
     setColorImages((prev) => {
       const updated: typeof prev = {};
 
@@ -243,8 +248,10 @@ export default function CreateProductPage() {
       }
     });
 
-    console.log("typeof description:", typeof values.description);
-    console.log("description value:", values.description);
+    if (!isHaveThumbnail) {
+      messageApiRef.error("Vui lòng chọn thumbnail");
+      return;
+    }
 
     try {
       setIsLoading(true);

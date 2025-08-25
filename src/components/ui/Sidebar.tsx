@@ -68,6 +68,18 @@ const Sidebar = () => {
       label: <Link href="/customer">Customers</Link>,
     },
     {
+      key: "posts",
+      icon: <AppstoreOutlined />,
+      label: <Link href="/posts">Post</Link>,
+      children: [
+        {
+          key: "post-topic",
+          icon: <MdOutlineCategory />,
+          label: <Link href="/posts/topics">Topic</Link>,
+        },
+      ],
+    },
+    {
       key: "products",
       icon: <AppstoreOutlined />,
       label: <Link href="/products">Product</Link>,

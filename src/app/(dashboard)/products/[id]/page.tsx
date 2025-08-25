@@ -223,7 +223,7 @@ export default function EditProductPage() {
         const colorId = match[1];
         const variant = (product?.variants || []).find(
           (v: Variants) => v.color?.id === colorId
-        );
+        ) as Variants | undefined;
         if (!variant) return;
 
         const colorName = variant.color?.name ?? `unknown-color-${colorId}`;
@@ -374,6 +374,8 @@ export default function EditProductPage() {
     }
     return value;
   };
+
+  console.log("Images:", colorImages);
 
   const onFinish = async (values: ProductFormValues) => {
     if (

@@ -1,19 +1,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { File } from "buffer";
 
-type CreatedBy = {
+export type CreatedBy = {
   id: string;
   username?: string;
   profile: Profile;
 };
 
-type CreatedAt = {
+export type UpdatedBy = {
   id: string;
   username?: string;
   profile: Profile;
 };
 
-type Profile = {
+export type Profile = {
   id: string;
   first_name: string;
   last_name: string;
@@ -29,7 +29,7 @@ export interface Size {
   name: string;
   updated_at: string | number | Date;
   created_at: string | number | Date;
-  updated_by: CreatedAt;
+  updated_by: UpdatedBy;
   created_by: CreatedBy;
 }
 
@@ -38,7 +38,7 @@ export interface Color {
   name: string;
   updated_at: string | number | Date;
   created_at: string | number | Date;
-  updated_by: CreatedAt;
+  updated_by: UpdatedBy;
   created_by: CreatedBy;
 }
 
@@ -56,7 +56,7 @@ export interface Tags {
   name: string;
   updated_at: string | number | Date;
   created_at: string | number | Date;
-  updated_by: CreatedAt;
+  updated_by: UpdatedBy;
   created_by: CreatedBy;
 }
 

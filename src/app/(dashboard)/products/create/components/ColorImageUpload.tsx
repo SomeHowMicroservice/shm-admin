@@ -20,7 +20,7 @@ import { useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { getBase64 } from "@/utils/image";
 
-type CustomUploadFile = UploadFile & {
+export type CustomUploadFile = UploadFile & {
   isThumbnail?: boolean;
   isOld?: boolean;
   sortOrder?: number;
@@ -86,7 +86,6 @@ const ColorImageUpload = ({
   ) => void;
   onSetThumbnail?: (colorName: string, uid: string) => void;
 }) => {
-  // sync với prop initialList khi parent thay đổi
   const sortByOrder = (list: CustomUploadFile[] = []) =>
     [...list].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
