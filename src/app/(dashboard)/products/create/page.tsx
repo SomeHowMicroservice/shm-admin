@@ -120,21 +120,28 @@ export default function CreateProductPage() {
       };
     });
   };
-
   const handleSetThumbnail = (colorName: string, uid: string) => {
     setIsHaveThumbnail(true);
     setColorImages((prev) => {
       const updated: typeof prev = {};
 
       Object.keys(prev).forEach((c) => {
-        updated[c] = prev[c].map((file) => ({
-          ...file,
-          isThumbnail: c === colorName && file.uid === uid,
-        }));
+        if (c === colorName) {
+          updated[c] = prev[c].map((file) => ({
+            ...file,
+            isThumbnail: file.uid === uid, 
+          }));
+        } else {
+          updated[c] = prev[c];
+        }
       });
 
       return updated;
     });
+
+    setTimeout(() => {
+      form.validateFields(["colorImages"]);
+    }, 0);
   };
 
   const getSelectedColors = () => {
@@ -225,7 +232,7 @@ export default function CreateProductPage() {
           formData.append(`images[${imageIndex}][color_id]`, String(color_id));
           formData.append(
             `images[${imageIndex}][is_thumbnail]`,
-            idx === 0 ? "true" : "false"
+            file.isThumbnail ? "true" : "false"
           );
           formData.append(`images[${imageIndex}][sort_order]`, String(idx + 1));
           imageIndex++;
@@ -263,6 +270,7 @@ export default function CreateProductPage() {
       messageApiRef.error("Tạo sản phẩm thất bại");
     } finally {
       setIsLoading(false);
+      setIsHaveThumbnail(false);
     }
   };
 
@@ -574,13 +582,7 @@ export default function CreateProductPage() {
                       key={String(colorName)}
                       colorName={String(colorName)}
                       initialList={colorImages[String(colorName)] || []}
-                      handleColorImageChange={(colorName, info) => {
-                        handleColorImageChange(colorName, info);
-                        // Trigger validation after image change
-                        setTimeout(() => {
-                          form.validateFields(["colorImages"]);
-                        }, 100);
-                      }}
+                      handleColorImageChange={handleColorImageChange}
                       onSetThumbnail={handleSetThumbnail}
                     />
                   ))}

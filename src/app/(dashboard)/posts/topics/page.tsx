@@ -177,7 +177,7 @@ const TopicPage = () => {
         <Button
           type="default"
           icon={<RestOutlined style={{ color: "red" }} />}
-          onClick={() => router.push("/products/colors/deleted")}
+          onClick={() => router.push("/posts/topics/deleted")}
           className="border border-red-600"
         >
           Topic đã xóa
