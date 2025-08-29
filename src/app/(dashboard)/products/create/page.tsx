@@ -11,9 +11,9 @@ import {
   DatePicker,
   Spin,
   UploadFile as AntdUploadFile,
-  message,
 } from "antd";
 
+import { memo } from "react";
 import { useRouter } from "next/navigation";
 import {
   createProduct,
@@ -56,7 +56,7 @@ export interface ProductFormValues {
 
 const { Option } = Select;
 
-export default function CreateProductPage() {
+const CreateProductPage = () => {
   const apiKey = process.env.NEXT_PUBLIC_TINY_MCE_API_KEY;
 
   const router = useRouter();
@@ -126,14 +126,10 @@ export default function CreateProductPage() {
       const updated: typeof prev = {};
 
       Object.keys(prev).forEach((c) => {
-        if (c === colorName) {
-          updated[c] = prev[c].map((file) => ({
-            ...file,
-            isThumbnail: file.uid === uid, 
-          }));
-        } else {
-          updated[c] = prev[c];
-        }
+        updated[c] = prev[c].map((file) => ({
+          ...file,
+          isThumbnail: c === colorName && file.uid === uid,
+        }));
       });
 
       return updated;
@@ -141,8 +137,16 @@ export default function CreateProductPage() {
 
     setTimeout(() => {
       form.validateFields(["colorImages"]);
-    }, 0);
+    }, 100);
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      form.validateFields(["colorImages"]);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [colorImages]);
 
   const getSelectedColors = () => {
     const formValues = form.getFieldsValue();
@@ -529,21 +533,18 @@ export default function CreateProductPage() {
                   0
                 );
 
-                // Kiểm tra có ít nhất 1 thuộc tính
                 if (selectedColors.length === 0) {
                   return Promise.reject(
                     new Error("Vui lòng thêm ít nhất 1 thuộc tính sản phẩm")
                   );
                 }
 
-                // Kiểm tra có ít nhất 1 ảnh
                 if (totalImages === 0) {
                   return Promise.reject(
                     new Error("Vui lòng chọn ít nhất 1 ảnh")
                   );
                 }
 
-                // Kiểm tra mỗi màu được chọn phải có ít nhất 1 ảnh
                 for (const colorName of selectedColors) {
                   const colorImagesList = colorImages[String(colorName)] || [];
                   if (colorImagesList.length === 0) {
@@ -594,10 +595,13 @@ export default function CreateProductPage() {
 
         <Form.Item
           noStyle
-          shouldUpdate={(prev, cur) =>
-            prev.variants !== cur.variants ||
-            JSON.stringify(colorImages) !== JSON.stringify(prev.colorImages)
-          }
+          shouldUpdate={(prev, cur) => {
+            const variantsChanged = prev.variants !== cur.variants;
+            const colorImagesChanged =
+              JSON.stringify(prev._colorImages) !==
+              JSON.stringify(cur._colorImages);
+            return variantsChanged || colorImagesChanged;
+          }}
         >
           {() => {
             const variants = form.getFieldValue("variants") || [];
@@ -676,4 +680,6 @@ export default function CreateProductPage() {
       </Form>
     </div>
   );
-}
+};
+
+export default memo(CreateProductPage);
