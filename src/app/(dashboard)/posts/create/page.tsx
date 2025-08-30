@@ -7,8 +7,8 @@ import { Form, Input, Button, Select, Switch, Spin } from "antd";
 import { useRouter } from "next/navigation";
 import { Editor } from "@tinymce/tinymce-react";
 import { messageApiRef } from "@/components/layout/MessageProvider";
-import { Topic } from "@/types/post";
-import { getAllTopics } from "@/api/post";
+import { ICreatePostData, Topic } from "@/types/post";
+import { createPost, getAllTopics } from "@/api/post";
 
 const { Option } = Select;
 
@@ -43,16 +43,18 @@ export default function CreatePostPage() {
   const onFinish = async (values: any) => {
     setIsLoading(true);
     try {
-      const payload = {
+      const payload: ICreatePostData = {
         title: values.title,
         topic_id: values.topic_id,
         content: content,
         is_published: isPublished,
       };
 
-      console.log("Payload gửi lên BE:", payload);
+      const res = await createPost(payload);
+      messageApiRef.success(res.data.message);
+      router.push(`/posts/${res.data.id}`)
     } catch (error: any) {
-      messageApiRef.error(error.message || "Có lỗi xảy ra!");
+      messageApiRef.error(error|| "Có lỗi xảy ra!");
     } finally {
       setIsLoading(false);
     }

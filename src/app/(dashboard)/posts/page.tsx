@@ -1,30 +1,22 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { Button, Table, Popconfirm, Space } from "antd";
+import { Button, Table, Popconfirm, Space, Tag, Image, Tooltip } from "antd";
 import { useEffect, useState } from "react";
-import { Size } from "@/types/product";
 import {
   DeleteOutlined,
   EyeOutlined,
   PlusOutlined,
   RestOutlined,
 } from "@ant-design/icons";
-
-import {
-  getAllTopics,
-  createTopic,
-  updateTopic,
-  deleteTopic,
-  deleteTopics,
-} from "@/api/post";
-
+import { getAllPosts, deletePost, deletePosts } from "@/api/post";
 import { useRouter } from "next/navigation";
 import { messageApiRef } from "@/components/layout/MessageProvider";
-import { Topic } from "@/types/post";
+import { Post } from "@/types/post";
+import Link from "antd/es/typography/Link";
 
 const PostPage = () => {
-  const [topics, setTopics] = useState<Size[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
@@ -33,8 +25,8 @@ const PostPage = () => {
   const fetchTopics = async () => {
     setLoading(true);
     try {
-      const res = await getAllTopics();
-      setTopics(res.data.data.topics);
+      const res = await getAllPosts();
+      setPosts(res.data.data.posts);
     } catch (error: any) {
       messageApiRef.error(error);
     } finally {
@@ -46,30 +38,9 @@ const PostPage = () => {
     fetchTopics();
   }, []);
 
-  const handleCreate = async (data: Topic) => {
-    try {
-      const res = await createTopic(data);
-      messageApiRef.success(res.data.message);
-      setCreateOpen(false);
-      fetchTopics();
-    } catch (error: any) {
-      messageApiRef.error(error);
-    }
-  };
-
-  const handleUpdate = async (updated: Topic) => {
-    try {
-      const res = await updateTopic(updated.id, { name: updated.name });
-      setSelectedTopic(null);
-      messageApiRef.success(res.data.message);
-      fetchTopics();
-    } catch (error: any) {
-      messageApiRef.error(error);
-    }
-  };
   const handleDelete = async (id: string) => {
     try {
-      const res = await deleteTopic(id);
+      const res = await deletePost(id);
       messageApiRef.success(res.data.message);
       fetchTopics();
     } catch (error: any) {
@@ -79,9 +50,7 @@ const PostPage = () => {
 
   const handleBulkDelete = async () => {
     try {
-      const res = await deleteTopics(
-        selectedRowKeys.map((id) => id.toString())
-      );
+      const res = await deletePosts(selectedRowKeys.map((id) => id.toString()));
       messageApiRef.success(res.data.message);
       setSelectedRowKeys([]);
       fetchTopics();
@@ -97,22 +66,53 @@ const PostPage = () => {
 
   const columns = [
     {
-      title: "Topic",
-      dataIndex: "name",
+      title: "Hình ảnh",
+      dataIndex: ["thumbnail", "url"],
+      render: (thumbnail: string) => (
+        <Image
+          src={thumbnail}
+          alt="Thumbnail"
+          className="object-cover rounded"
+          width={80}
+          height={70}
+        />
+      ),
       align: "center" as const,
     },
     {
-      title: "Slug",
-      dataIndex: "slug",
+      title: "Tên bài",
+      dataIndex: "title",
+      align: "center" as const,
+      render: (title: string, record: Post) => (
+        <Tooltip title={title} className="cursor-pointer">
+          <Link
+            href={`/posts/${record.id}`}
+            className="max-w-[200px] overflow-hidden whitespace-nowrap text-ellipsis hover:underline"
+          >
+            {title}
+          </Link>
+        </Tooltip>
+      ),
+    },
+    {
+      title: "Chủ đề",
+      dataIndex: "topic",
+      render: (topic: { id: string; name: string }) =>
+        topic ? (
+          <Tag color="blue">{topic.name}</Tag>
+        ) : (
+          <Tag color="default">Không có</Tag>
+        ),
       align: "center" as const,
     },
+
     {
       title: "Thao tác",
-      render: (_: unknown, record: Size) => (
+      render: (_: unknown, record: Post) => (
         <div className="flex gap-2 justify-center">
           <Button
             type="link"
-            onClick={() => setSelectedTopic(record)}
+            onClick={() => router.push(`/posts/${record.id}`)}
             icon={<EyeOutlined />}
           />
           <Popconfirm
@@ -180,7 +180,7 @@ const PostPage = () => {
       </div>
 
       <Table
-        dataSource={topics}
+        dataSource={posts}
         columns={columns}
         rowKey="id"
         loading={loading}

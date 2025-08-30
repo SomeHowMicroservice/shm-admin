@@ -112,7 +112,7 @@ export default function EditProductPage() {
         new Map(
           (product.variants || [])
             .map((v: Variants) => [v.color?.id, v.color])
-            .filter(([id, color]) => id && color)
+            .filter(([id, color]: [string, Color]) => id && color)
         ).values()
       );
       setColors(colorsFromProduct);
@@ -121,7 +121,7 @@ export default function EditProductPage() {
         new Map(
           (product.variants || [])
             .map((v: Variants) => [v.size?.id, v.size])
-            .filter(([id, size]) => id && size)
+            .filter(([id, size]: [string, Size]) => id && size)
         ).values()
       );
       setSizes(sizesFromProduct);

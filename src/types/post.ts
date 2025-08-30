@@ -8,6 +8,16 @@ export interface Topic {
   created_at: string | number | Date | null | undefined;
   name: string;
   slug?: string;
+  is_deleted?: boolean;
+}
+
+export interface Post {
+  id: string;
+  title: string;
+  content: string;
+  is_published: boolean;
+  topic_id: string;
+  topic?: Topic;
 }
 
 export interface ICreateTopicData {
@@ -25,5 +35,4 @@ export interface ICreatePostData {
   content: string;
   is_published: boolean;
   topic_id: string;
-  images: ICreatePostImageData[];
 }

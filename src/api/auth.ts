@@ -84,19 +84,3 @@ export const resetPassword = (data: {
 export const logout = () => {
   return axiosRequest.post("/auth/sign-out");
 };
-
-const authAPI = {
-  login,
-  logout,
-  register,
-  getMe,
-  resetPassword,
-  forgotPassword,
-  setTokenServer,
-  getRefreshToken,
-  deleteTokenServer,
-  verifyOtp,
-  logOut,
-};
-
-export default authAPI;

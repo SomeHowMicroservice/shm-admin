@@ -22,7 +22,7 @@ export const getCategories = async () => {
 };
 
 export const getCategoryTree = async () => {
-  return axiosRequest.get("/categories/tree")
+  return axiosRequest.get("/categories/tree");
 };
 
 export const createCategory = (data: { name: string; slug?: string }) => {
@@ -273,26 +273,3 @@ export const restoreProduct = (id: string) => {
 export const restoreProducts = (ids: string[]) => {
   return axiosRequest.put("/admin/products/restore", { ids });
 };
-
-const productAPI = {
-  createCategory,
-  getCategories,
-  getCategoryById,
-  getColors,
-  createColor,
-  getSizes,
-  createSize,
-  getProductColors,
-  getProductSizes,
-  getProductTags,
-  updateColor,
-  updateTag,
-  updateSize,
-  updateCategory,
-  getDeletedProduct,
-  getDeletedProductDetail,
-  restoreProduct,
-  restoreProducts,
-};
-
-export default productAPI;

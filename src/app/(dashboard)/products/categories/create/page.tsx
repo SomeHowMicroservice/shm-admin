@@ -52,7 +52,7 @@ const CreateCategoryPage = () => {
         payload as { name: string; slug?: string }
       );
       messageApiRef.success(res.data.message);
-      router.push(`/products/categories/${res.data.data.category_id}`);
+      router.push(`/products/categories/${res.data.data.id}`);
     } catch (error: any) {
       const errorMsg =
         error?.response?.data?.message || error?.message || String(error);

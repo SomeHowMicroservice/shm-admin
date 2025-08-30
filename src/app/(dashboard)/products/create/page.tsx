@@ -268,7 +268,7 @@ const CreateProductPage = () => {
       setIsLoading(true);
       const res = await createProduct(formData);
       messageApiRef.success(res.data.message);
-      router.push(`/products/${res.data.data.product_id}`);
+      router.push(`/products/${res.data.data.id}`);
     } catch (error) {
       console.error(error);
       messageApiRef.error("Tạo sản phẩm thất bại");
@@ -341,6 +341,7 @@ const CreateProductPage = () => {
             init={{
               height: 500,
               menubar: true,
+              paste_data_images: false,
               toolbar:
                 "undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table mergetags | addcomment showcomments | spellcheckdialog a11ycheck typography | align lineheight | checklist numlist bullist indent outdent | emoticons charmap | removeformat",
               tinycomments_mode: "embedded",

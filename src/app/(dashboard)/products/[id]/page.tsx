@@ -14,8 +14,13 @@ import {
   UploadFile,
   Descriptions,
   Flex,
+  Popconfirm,
 } from "antd";
-import { getCategoriesNoChild, updateProduct } from "@/api/product";
+import {
+  deleteProduct,
+  getCategoriesNoChild,
+  updateProduct,
+} from "@/api/product";
 import {
   Category,
   Color,
@@ -25,7 +30,11 @@ import {
   Variants,
 } from "@/types/product";
 import { Editor } from "@tinymce/tinymce-react";
-import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
+import {
+  DeleteOutlined,
+  MinusCircleOutlined,
+  PlusOutlined,
+} from "@ant-design/icons";
 import ColorImageUpload from "../create/components/ColorImageUpload";
 import { toPostgresTimestamp } from "@/utils/time";
 import { useParams } from "next/navigation";
@@ -375,8 +384,6 @@ export default function EditProductPage() {
     return value;
   };
 
-  console.log("Images:", colorImages);
-
   const onFinish = async (values: ProductFormValues) => {
     if (
       values.is_sale &&
@@ -665,6 +672,19 @@ export default function EditProductPage() {
     }
   };
 
+  const handleDelete = async () => {
+    try {
+      setIsLoading(true);
+      const res = await deleteProduct(productId);
+      messageApiRef.success(res.data.message);
+      router.push("/products/deleted");
+    } catch (error: any) {
+      messageApiRef.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   if (loadingOptions) {
     return (
       <div className="flex justify-center p-12">
@@ -788,6 +808,7 @@ export default function EditProductPage() {
             init={{
               height: 400,
               menubar: true,
+              paste_data_images: false,
               toolbar:
                 "undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table mergetags | addcomment showcomments | spellcheckdialog a11ycheck typography | align lineheight | checklist numlist bullist indent outdent | emoticons charmap | removeformat",
               tinycomments_mode: "embedded",
@@ -1071,6 +1092,29 @@ export default function EditProductPage() {
             >
               {isLoading ? "Đang cập nhật" : "Cập nhật"}
             </Button>
+          </Form.Item>
+          <Form.Item>
+            <Popconfirm
+              title="Bạn có chắc muốn xóa sản phẩm này?"
+              okText="Xóa"
+              cancelText="Hủy"
+              onConfirm={handleDelete}
+              disabled={isLoading}
+              okButtonProps={{
+                loading: isLoading,
+              }}
+            >
+              <Button
+                type="primary"
+                icon={<DeleteOutlined />}
+                className="bg-red-500 flex items-center justify-center"
+                loading={isLoading}
+                disabled={isLoading}
+                danger
+              >
+                {isLoading ? "Đang xóa" : "Xóa"}
+              </Button>
+            </Popconfirm>
           </Form.Item>
         </div>
       </Form>
