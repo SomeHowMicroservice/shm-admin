@@ -8,8 +8,9 @@ import { ArrowLeftOutlined } from "@ant-design/icons";
 import { useParams, useRouter } from "next/navigation";
 import { Editor } from "@tinymce/tinymce-react";
 import { messageApiRef } from "@/components/layout/MessageProvider";
-import { ICreatePostData, Post, Topic } from "@/types/post";
+import { Post, Topic } from "@/types/post";
 import { getAllTopics, getPostById, updatePost } from "@/api/post";
+import isEqual from "lodash/isEqual";
 
 const { Option } = Select;
 
@@ -28,6 +29,7 @@ export default function DetailPostPage() {
   const [content, setContent] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isDeletedTopic, setIsDeletedTopic] = useState<boolean>(false);
+  const [originalData, setOriginalData] = useState<any>(null);
 
   const fetchPostDetail = async () => {
     try {
@@ -37,9 +39,18 @@ export default function DetailPostPage() {
       setPost(postData);
       setIsDeletedTopic(res.data.data.post.topic.is_deleted);
 
+      const initialObj = {
+        title: postData.title || "",
+        topic_id: postData.topic.id,
+        content: postData.content || "",
+        is_published: postData.is_published,
+      };
+
+      setOriginalData(initialObj);
+
       form.setFieldsValue({
         title: postData.title,
-        topic_id: postData.topic?.name,
+        topic_id: postData.topic?.id,
         content: postData.content,
         is_published: postData.is_published,
       });
@@ -75,30 +86,81 @@ export default function DetailPostPage() {
 
   const handleTopicChange = (value: string) => {
     const selectedTopic = topics.find((t) => t.id === value);
-
-    // Nếu không có topic trong danh sách hoặc topic không bị xóa thì bỏ tag
     if (!selectedTopic) {
       setIsDeletedTopic(false);
       return;
     }
-
-    // Nếu có topic trong danh sách, chỉ initial topic mới có is_deleted
     setIsDeletedTopic(selectedTopic.is_deleted || false);
+  };
+
+  const normalizeHTML = (html: string) => {
+    if (!html) return "";
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = html;
+    const normalizedHTML = tempDiv.innerHTML;
+
+    return normalizedHTML
+      .replace(/\r\n/g, "\n")
+      .replace(/\n+/g, "\n")
+      .replace(/\s+/g, " ")
+      .replace(/&nbsp;/g, " ")
+      .trim();
+  };
+
+  const normalizeValue = (value: any, isHTML = false) => {
+    if (typeof value === "string") {
+      if (isHTML) {
+        return normalizeHTML(value);
+      }
+      return value.replace(/\r\n/g, "\n").trim();
+    }
+    return value;
   };
 
   const onFinish = async (values: any) => {
     setIsLoading(true);
-    try {
-      const payload: ICreatePostData = {
-        title: values.title,
-        topic_id: values.topic_id,
-        content: content,
-        is_published: isPublished,
-      };
 
-      const res = await updatePost(id, payload);
+    const currentData = {
+      title: normalizeValue(values.title),
+      topic_id: values.topic_id,
+      content: normalizeValue(content, true),
+      is_published: isPublished,
+    };
+
+    const normalizedOriginalData = {
+      title: normalizeValue(originalData.title),
+      topic_id: originalData.topic_id,
+      content: normalizeValue(originalData.content, true),
+      is_published: originalData.is_published,
+    };
+
+    const changedFields: any = {};
+    let hasChanges = false;
+
+    Object.keys(currentData).forEach((key) => {
+      if (!isEqual(currentData[key], normalizedOriginalData[key])) {
+        changedFields[key] = key === "content" ? content : currentData[key];
+        hasChanges = true;
+
+        // console.log(`${key} changed:`);
+        // console.log("Current:", currentData[key]);
+        // console.log("Original:", normalizedOriginalData[key]);
+        // console.log("---");
+      }
+    });
+
+    if (!hasChanges) {
+      messageApiRef.info("Không có thay đổi nào để lưu!");
+      setIsLoading(false);
+      return;
+    }
+
+    console.log("Changed fields:", changedFields);
+
+    try {
+      const res = await updatePost(id, changedFields);
       messageApiRef.success(res.data.message);
-      fetchPostDetail();
+      router.push("/posts");
     } catch (error: any) {
       messageApiRef.error(error || "Có lỗi xảy ra!");
     } finally {

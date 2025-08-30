@@ -82,7 +82,7 @@ export const deletePostsPermanent = (ids: string[]) => {
 };
 
 export const updatePost = (id: string, data: ICreatePostData) => {
-  return axiosRequest.put(`/admin/posts/${id}`, data);
+  return axiosRequest.patch(`/admin/posts/${id}`, data);
 };
 
 export const getAllTopicsNoAdmin = () => {

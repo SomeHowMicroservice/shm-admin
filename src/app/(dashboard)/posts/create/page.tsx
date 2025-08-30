@@ -52,9 +52,9 @@ export default function CreatePostPage() {
 
       const res = await createPost(payload);
       messageApiRef.success(res.data.message);
-      router.push(`/posts/${res.data.id}`)
+      router.push("/posts/");
     } catch (error: any) {
-      messageApiRef.error(error|| "Có lỗi xảy ra!");
+      messageApiRef.error(error || "Có lỗi xảy ra!");
     } finally {
       setIsLoading(false);
     }

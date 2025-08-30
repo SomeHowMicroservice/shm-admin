@@ -113,8 +113,6 @@ export default function EditProductPage() {
   const productId = String(param.id);
   const router = useRouter();
 
-  console.log(productId);
-
   const handleBack = () => {
     router.push("/products");
   };
@@ -654,7 +652,7 @@ export default function EditProductPage() {
     }
 
     if (!hasChanges) {
-      message.info("Không có thay đổi nào để lưu!");
+      messageApiRef.info("Không có thay đổi nào để lưu!");
       return;
     }
 
@@ -664,7 +662,7 @@ export default function EditProductPage() {
       messageApiRef.success(res.data.message);
       setDeletedImageIds([]);
       setDeleteVariantIds([]);
-      await fetchProductDetail();
+      setProduct(res.data.data.product);
     } catch (error: any) {
       messageApiRef.error(error);
     } finally {
@@ -1082,40 +1080,42 @@ export default function EditProductPage() {
             </Descriptions.Item>
           </Descriptions>
 
-          <Form.Item>
-            <Button
-              type="primary"
-              htmlType="submit"
-              className="bg-blue-500 flex items-center justify-center"
-              loading={isLoading}
-              disabled={isLoading}
-            >
-              {isLoading ? "Đang cập nhật" : "Cập nhật"}
-            </Button>
-          </Form.Item>
-          <Form.Item>
-            <Popconfirm
-              title="Bạn có chắc muốn xóa sản phẩm này?"
-              okText="Xóa"
-              cancelText="Hủy"
-              onConfirm={handleDelete}
-              disabled={isLoading}
-              okButtonProps={{
-                loading: isLoading,
-              }}
-            >
+          <Flex gap={20}>
+            <Form.Item>
               <Button
                 type="primary"
-                icon={<DeleteOutlined />}
-                className="bg-red-500 flex items-center justify-center"
+                htmlType="submit"
+                className="bg-blue-500 flex items-center justify-center"
                 loading={isLoading}
                 disabled={isLoading}
-                danger
               >
-                {isLoading ? "Đang xóa" : "Xóa"}
+                {isLoading ? "Đang xử lý" : "Cập nhật"}
               </Button>
-            </Popconfirm>
-          </Form.Item>
+            </Form.Item>
+            <Form.Item>
+              <Popconfirm
+                title="Bạn có chắc muốn xóa sản phẩm này?"
+                okText="Xóa"
+                cancelText="Hủy"
+                onConfirm={handleDelete}
+                disabled={isLoading}
+                okButtonProps={{
+                  loading: isLoading,
+                }}
+              >
+                <Button
+                  type="primary"
+                  icon={<DeleteOutlined />}
+                  className="bg-red-500 flex items-center justify-center"
+                  loading={isLoading}
+                  disabled={isLoading}
+                  danger
+                >
+                  {isLoading ? "Đang xử lý" : "Xóa"}
+                </Button>
+              </Popconfirm>
+            </Form.Item>
+          </Flex>
         </div>
       </Form>
     </div>
