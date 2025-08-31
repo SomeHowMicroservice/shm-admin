@@ -2,14 +2,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Form, Input, Button, Select, Switch, Spin, Flex, Tag } from "antd";
-import { ArrowLeftOutlined } from "@ant-design/icons";
+import {
+  Form,
+  Input,
+  Button,
+  Select,
+  Switch,
+  Spin,
+  Flex,
+  Tag,
+  Popconfirm,
+} from "antd";
+import { ArrowLeftOutlined, DeleteOutlined } from "@ant-design/icons";
 
 import { useParams, useRouter } from "next/navigation";
 import { Editor } from "@tinymce/tinymce-react";
 import { messageApiRef } from "@/components/layout/MessageProvider";
 import { Post, Topic } from "@/types/post";
-import { getAllTopics, getPostById, updatePost } from "@/api/post";
+import { deletePost, getAllTopics, getPostById, updatePost } from "@/api/post";
 import isEqual from "lodash/isEqual";
 
 const { Option } = Select;
@@ -53,6 +63,7 @@ export default function DetailPostPage() {
         topic_id: postData.topic?.id,
         content: postData.content,
         is_published: postData.is_published,
+        slug: postData.slug,
       });
 
       setContent(postData.content || "");
@@ -168,6 +179,16 @@ export default function DetailPostPage() {
     }
   };
 
+  const handleDelete = async () => {
+    try {
+      const res = await deletePost(id);
+      messageApiRef.success(res.data.message);
+      router.push("/posts/deleted");
+    } catch (error: any) {
+      messageApiRef.error(error);
+    }
+  };
+
   const handleBack = () => {
     router.push("/posts");
   };
@@ -207,6 +228,10 @@ export default function DetailPostPage() {
           rules={[{ required: true, message: "Bắt buộc" }]}
         >
           <Input />
+        </Form.Item>
+
+        <Form.Item label="Slug" name="slug">
+          <Input disabled />
         </Form.Item>
 
         <div className="flex items-center gap-2">
@@ -277,17 +302,43 @@ export default function DetailPostPage() {
           <Switch onChange={(val) => setIsPublished(val)} />
         </Form.Item>
 
-        <Form.Item className="pt-4">
-          <Button
-            type="primary"
-            htmlType="submit"
-            className="bg-blue-500"
-            loading={isLoading}
-            disabled={isLoading}
-          >
-            {isLoading ? "Đang xử lý " : "Cập nhật"}
-          </Button>
-        </Form.Item>
+        <Flex gap={20}>
+          <Form.Item className="pt-4">
+            <Button
+              type="primary"
+              htmlType="submit"
+              className="bg-blue-500"
+              loading={isLoading}
+              disabled={isLoading}
+            >
+              {isLoading ? "Đang xử lý " : "Cập nhật"}
+            </Button>
+          </Form.Item>
+
+          <Form.Item>
+            <Popconfirm
+              title="Bạn có chắc muốn xóa bài viết này?"
+              okText="Xóa"
+              cancelText="Hủy"
+              onConfirm={handleDelete}
+              disabled={isLoading}
+              okButtonProps={{
+                loading: isLoading,
+              }}
+            >
+              <Button
+                type="primary"
+                icon={<DeleteOutlined />}
+                className="bg-red-500 flex items-center justify-center"
+                loading={isLoading}
+                disabled={isLoading}
+                danger
+              >
+                {isLoading ? "Đang xử lý" : "Xóa"}
+              </Button>
+            </Popconfirm>
+          </Form.Item>
+        </Flex>
       </Form>
     </div>
   );

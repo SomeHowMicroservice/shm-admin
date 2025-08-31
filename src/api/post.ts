@@ -57,6 +57,10 @@ export const getDeletedPosts = () => {
   return axiosRequest.get("/admin/posts/deleted");
 };
 
+export const getDeletedPostsDetail = (id: string) => {
+  return axiosRequest.get(`/admin/posts/${id}/deleted`);
+};
+
 export const deletePost = (id: string) => {
   return axiosRequest.delete(`/admin/posts/${id}`);
 };
@@ -66,11 +70,11 @@ export const deletePosts = (ids: string[]) => {
 };
 
 export const restorePost = (id: string) => {
-  return axiosRequest.put(`/admin/posts/${id}/restore`);
+  return axiosRequest.patch(`/admin/posts/${id}/restore`);
 };
 
 export const restorePosts = (ids: string[]) => {
-  return axiosRequest.put(`/admin/posts/restore`, { ids });
+  return axiosRequest.patch(`/admin/posts/restore`, { ids });
 };
 
 export const deletePostPermanent = (id: string) => {

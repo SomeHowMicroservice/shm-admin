@@ -1007,7 +1007,6 @@ export default function EditProductPage() {
                     type="dashed"
                     icon={<PlusOutlined />}
                     onClick={() => {
-                      // Tạo variant mới với unique key
                       add({
                         sku: "",
                         size: undefined,

@@ -18,6 +18,10 @@ export interface Post {
   is_published: boolean;
   topic_id: string;
   topic?: Topic;
+  updated_at: string | number | Date;
+  created_at: string | number | Date;
+  updated_by: UpdatedBy;
+  created_by: CreatedBy;
 }
 
 export interface ICreateTopicData {

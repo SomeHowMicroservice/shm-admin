@@ -163,7 +163,7 @@ const PostPage = () => {
               disabled={selectedRowKeys.length === 0}
             >
               {selectedRowKeys.length > 0
-                ? `Xóa ${selectedRowKeys.length} topic`
+                ? `Xóa ${selectedRowKeys.length} bài viết`
                 : "Xóa"}
             </Button>
           </Popconfirm>
