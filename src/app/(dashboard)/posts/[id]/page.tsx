@@ -12,6 +12,7 @@ import {
   Flex,
   Tag,
   Popconfirm,
+  Descriptions,
 } from "antd";
 import { ArrowLeftOutlined, DeleteOutlined } from "@ant-design/icons";
 
@@ -64,6 +65,7 @@ export default function DetailPostPage() {
         content: postData.content,
         is_published: postData.is_published,
         slug: postData.slug,
+        published_at: new Date(postData.published_at).toLocaleString("vi-VN"),
       });
 
       setContent(postData.content || "");
@@ -152,11 +154,6 @@ export default function DetailPostPage() {
       if (!isEqual(currentData[key], normalizedOriginalData[key])) {
         changedFields[key] = key === "content" ? content : currentData[key];
         hasChanges = true;
-
-        // console.log(`${key} changed:`);
-        // console.log("Current:", currentData[key]);
-        // console.log("Original:", normalizedOriginalData[key]);
-        // console.log("---");
       }
     });
 
@@ -165,8 +162,6 @@ export default function DetailPostPage() {
       setIsLoading(false);
       return;
     }
-
-    console.log("Changed fields:", changedFields);
 
     try {
       const res = await updatePost(id, changedFields);
@@ -298,46 +293,77 @@ export default function DetailPostPage() {
           />
         </Form.Item>
 
-        <Form.Item label="Đăng tải" name="is_published" valuePropName="checked">
-          <Switch onChange={(val) => setIsPublished(val)} />
-        </Form.Item>
-
         <Flex gap={20}>
-          <Form.Item className="pt-4">
-            <Button
-              type="primary"
-              htmlType="submit"
-              className="bg-blue-500"
-              loading={isLoading}
-              disabled={isLoading}
-            >
-              {isLoading ? "Đang xử lý " : "Cập nhật"}
-            </Button>
+          <Form.Item
+            label="Đăng tải"
+            name="is_published"
+            valuePropName="checked"
+          >
+            <Switch onChange={(val) => setIsPublished(val)} />
           </Form.Item>
 
-          <Form.Item>
-            <Popconfirm
-              title="Bạn có chắc muốn xóa bài viết này?"
-              okText="Xóa"
-              cancelText="Hủy"
-              onConfirm={handleDelete}
-              disabled={isLoading}
-              okButtonProps={{
-                loading: isLoading,
-              }}
-            >
+          <Form.Item label="Ngày đăng tải" name="published_at">
+            <Input disabled />
+          </Form.Item>
+        </Flex>
+
+        <Flex vertical gap={20}>
+          <Descriptions column={2} bordered size="small">
+            <Descriptions.Item label="Ngày tạo">
+              {new Date(post?.created_at ?? "").toLocaleString("vi-VN")}
+            </Descriptions.Item>
+            <Descriptions.Item label="Người tạo">
+              {post?.created_by?.profile
+                ? `${post?.created_by.profile.first_name} ${post?.created_by.profile.last_name}`
+                : post?.created_by?.username || "(Không rõ)"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Ngày sửa">
+              {new Date(post?.updated_at ?? "").toLocaleString("vi-VN")}
+            </Descriptions.Item>
+            <Descriptions.Item label="Người sửa">
+              {post?.updated_by?.profile
+                ? `${post?.updated_by.profile.first_name} ${post?.updated_by.profile.last_name}`
+                : post?.updated_by?.username || "(Không rõ)"}
+            </Descriptions.Item>
+          </Descriptions>
+
+          <Flex gap={20}>
+            <Form.Item className="pt-4">
               <Button
                 type="primary"
-                icon={<DeleteOutlined />}
-                className="bg-red-500 flex items-center justify-center"
+                htmlType="submit"
+                className="bg-blue-500"
                 loading={isLoading}
                 disabled={isLoading}
-                danger
               >
-                {isLoading ? "Đang xử lý" : "Xóa"}
+                {isLoading ? "Đang xử lý " : "Cập nhật"}
               </Button>
-            </Popconfirm>
-          </Form.Item>
+            </Form.Item>
+
+            <Form.Item>
+              <Popconfirm
+                title="Bạn có chắc muốn xóa bài viết này?"
+                okText="Xóa"
+                cancelText="Hủy"
+                onConfirm={handleDelete}
+                disabled={isLoading}
+                okButtonProps={{
+                  loading: isLoading,
+                }}
+              >
+                <Button
+                  type="primary"
+                  icon={<DeleteOutlined />}
+                  className="bg-red-500 flex items-center justify-center"
+                  loading={isLoading}
+                  disabled={isLoading}
+                  danger
+                >
+                  {isLoading ? "Đang xử lý" : "Xóa"}
+                </Button>
+              </Popconfirm>
+            </Form.Item>
+          </Flex>
         </Flex>
       </Form>
     </div>

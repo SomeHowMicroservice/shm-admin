@@ -1,4 +1,5 @@
 import axiosRequest from "@/config/axios";
+import { GetAllPostsParams } from "@/types/pagination";
 import { ICreateTopicData, ICreatePostData } from "@/types/post";
 
 export const createTopic = (data: ICreateTopicData) => {
@@ -45,8 +46,8 @@ export const createPost = (data: ICreatePostData) => {
   return axiosRequest.post("/admin/posts", data);
 };
 
-export const getAllPosts = () => {
-  return axiosRequest.get("/admin/posts");
+export const getAllPosts = (params?: GetAllPostsParams) => {
+  return axiosRequest.get("/admin/posts", { params });
 };
 
 export const getPostById = (id: string) => {

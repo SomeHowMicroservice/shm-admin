@@ -1,17 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import axiosRequest from "@/config/axios";
+import { GetAllProductsParams } from "@/types/pagination";
 import { Size, Tags } from "@/types/product";
-
-interface GetAllProductsParams {
-  page?: number;
-  limit?: number;
-  sort?: string;
-  order?: "asc" | "desc";
-  is_active?: boolean;
-  search?: string;
-  category_id?: string;
-  tag_id?: string;
-}
 
 export const getAllProducts = (params?: GetAllProductsParams) => {
   return axiosRequest.get("/admin/products", { params });

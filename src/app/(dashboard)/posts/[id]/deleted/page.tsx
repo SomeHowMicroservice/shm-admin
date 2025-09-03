@@ -71,10 +71,11 @@ export default function DetailPostPage() {
 
       form.setFieldsValue({
         title: postData.title,
-        topic_id: postData.topic?.id,
+        topic_id: postData.topic?.name,
         content: postData.content,
         is_published: postData.is_published,
         slug: postData.slug,
+        published_at: new Date(postData.published_at).toLocaleString("vi-VN"),
       });
 
       setContent(postData.content || "");
@@ -306,9 +307,19 @@ export default function DetailPostPage() {
           />
         </Form.Item>
 
-        <Form.Item label="Đăng tải" name="is_published" valuePropName="checked">
-          <Switch disabled onChange={(val) => setIsPublished(val)} />
-        </Form.Item>
+        <Flex gap={20}>
+          <Form.Item
+            label="Đăng tải"
+            name="is_published"
+            valuePropName="checked"
+          >
+            <Switch disabled onChange={(val) => setIsPublished(val)} />
+          </Form.Item>
+
+          <Form.Item label="Ngày đăng tải" name="published_at">
+            <Input disabled />
+          </Form.Item>
+        </Flex>
 
         <div className="flex flex-col gap-5">
           <Descriptions column={2} bordered size="small">
