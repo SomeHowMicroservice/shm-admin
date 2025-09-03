@@ -284,8 +284,9 @@ const PostPage = () => {
             options={[
               { label: "Tên A-Z", value: "title|asc" },
               { label: "Tên Z-A", value: "title|desc" },
-              { label: "Giá thấp → cao", value: "price|asc" },
-              { label: "Giá cao → thấp", value: "price|desc" },
+              { label: "Mới đăng tải", value: "published_at|desc" },
+              { label: "Bài viết mới nhất", value: "created_at|desc" },
+              { label: "Bài viết cũ nhất", value: "created_at|asc" },
             ]}
           />
         </div>

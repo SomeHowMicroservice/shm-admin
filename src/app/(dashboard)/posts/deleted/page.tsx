@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Button, Popconfirm, Space, Tooltip } from "antd";
+import { Button, Input, Popconfirm, Select, Space, Tag, Tooltip } from "antd";
 import Link from "antd/es/typography/Link";
 import { Image } from "antd";
 import Table, { ColumnsType } from "antd/es/table";
@@ -16,21 +16,52 @@ import { messageApiRef } from "@/components/layout/MessageProvider";
 import {
   deletePostPermanent,
   deletePostsPermanent,
+  getAllTopics,
   getDeletedPosts,
   restorePost,
   restorePosts,
 } from "@/api/post";
-import { Post } from "@/types/post";
+import { Post, Topic } from "@/types/post";
+
+const { Option } = Select;
 
 export default function DeletedPosts() {
   const [posts, setPosts] = useState<Post[]>([]);
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [sort, setSort] = useState<string | undefined>();
+  const [order, setOrder] = useState<"asc" | "desc" | undefined>();
+  const [isPublished, setIsPublished] = useState<boolean | undefined>();
+  const [search, setSearch] = useState<string | undefined>();
+  const [topicId, setTopicId] = useState<string | undefined>();
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
+
+  const fetchTopics = async () => {
+    setLoading(true);
+    try {
+      const res = await getAllTopics();
+      setTopics(res.data.data.topics);
+    } catch (error: any) {
+      messageApiRef.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchDeletedPosts = async () => {
     try {
       setLoading(true);
-      const res = await getDeletedPosts();
+      const res = await getDeletedPosts({
+        page,
+        limit,
+        sort,
+        order,
+        is_published: isPublished,
+        search,
+        topic_id: topicId,
+      });
       const postsList = res?.data?.data?.posts;
       setPosts(Array.isArray(postsList) ? postsList : []);
       messageApiRef.success(res.data.message);
@@ -43,6 +74,10 @@ export default function DeletedPosts() {
 
   useEffect(() => {
     fetchDeletedPosts();
+  }, [page, limit, sort, order, isPublished, search, topicId]);
+
+  useEffect(() => {
+    fetchTopics();
   }, []);
 
   const router = useRouter();
@@ -130,6 +165,17 @@ export default function DeletedPosts() {
       ),
     },
     {
+      title: "Chủ đề",
+      dataIndex: "topic",
+      render: (topic: { id: string; name: string }) =>
+        topic ? (
+          <Tag color="blue">{topic.name}</Tag>
+        ) : (
+          <Tag color="default">Không có</Tag>
+        ),
+      align: "center" as const,
+    },
+    {
       title: "Hành động",
       key: "actions",
       render: (_, record) => (
@@ -214,6 +260,75 @@ export default function DeletedPosts() {
             </Button>
           </Popconfirm>
         </Space>
+      </div>
+
+      <div className="flex-wrap gap-4 mb-5 flex justify-between">
+        <Input.Search
+          placeholder="Tìm kiếm bài viết..."
+          allowClear
+          onSearch={(value) => {
+            setSearch(value || undefined);
+            setPage(1);
+          }}
+          style={{ width: 350 }}
+        />
+
+        <div className="flex gap-2">
+          <Select
+            placeholder="Trạng thái"
+            allowClear
+            style={{ width: 150 }}
+            onChange={(value) => {
+              setIsPublished(
+                value === undefined ? undefined : value === "true"
+              );
+              setPage(1);
+            }}
+          >
+            <Select.Option value="true">Đăng tải</Select.Option>
+            <Select.Option value="false">Chưa đăng tải</Select.Option>
+          </Select>
+
+          <Select
+            placeholder="Chủ đề"
+            allowClear
+            style={{ width: 180 }}
+            onChange={(value) => {
+              setTopicId(value || undefined);
+              setPage(1);
+            }}
+          >
+            {topics.map((t: Topic) => (
+              <Option key={t.id} value={t.id}>
+                {t.name}
+              </Option>
+            ))}
+          </Select>
+
+          <Select
+            placeholder="Sắp xếp theo"
+            allowClear
+            style={{ width: 200 }}
+            onChange={(value) => {
+              if (!value) {
+                setSort(undefined);
+                setOrder(undefined);
+              } else {
+                const [s, o] = value.split("|");
+                setSort(s);
+                setOrder(o as "asc" | "desc");
+              }
+              setPage(1);
+            }}
+            options={[
+              { label: "Tên A-Z", value: "title|asc" },
+              { label: "Tên Z-A", value: "title|desc" },
+              { label: "Mới đăng tải", value: "published_at|desc" },
+              { label: "Bài viết mới nhất", value: "created_at|desc" },
+              { label: "Bài viết cũ nhất", value: "created_at|asc" },
+            ]}
+          />
+        </div>
       </div>
 
       <Table

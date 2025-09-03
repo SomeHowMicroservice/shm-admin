@@ -54,8 +54,8 @@ export const getPostById = (id: string) => {
   return axiosRequest.get(`/admin/posts/${id}`);
 };
 
-export const getDeletedPosts = () => {
-  return axiosRequest.get("/admin/posts/deleted");
+export const getDeletedPosts = (params?: GetAllPostsParams) => {
+  return axiosRequest.get("/admin/posts/deleted", { params });
 };
 
 export const getDeletedPostsDetail = (id: string) => {
