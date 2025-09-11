@@ -150,12 +150,25 @@ const ColorImageUpload = ({
   };
 
   const handleRemove = (file: UploadFile) => {
+    const removedFile = fileList.find((f) => f.uid === file.uid);
+    const wasThumbnail = removedFile?.isThumbnail;
+
     const newList = fileList
       .filter((f) => f.uid !== file.uid)
       .map((f, i) => ({ ...(f as CustomUploadFile), sortOrder: i + 1 }));
+
     setFileList(newList);
-    if (handleColorImageChange && colorName)
+
+    if (handleColorImageChange && colorName) {
       handleColorImageChange(colorName, { fileList: newList });
+    }
+
+    // FIX 1: Nếu ảnh bị xóa là thumbnail, tự động chọn ảnh đầu tiên làm thumbnail mới
+    if (wasThumbnail && newList.length > 0 && onSetThumbnail && colorName) {
+      setTimeout(() => {
+        onSetThumbnail(colorName, String(newList[0].uid));
+      }, 100);
+    }
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -198,7 +211,15 @@ const ColorImageUpload = ({
           <Upload
             listType="picture-card"
             fileList={fileList}
-            beforeUpload={() => false}
+            multiple
+            beforeUpload={(file) => {
+              const isImage = file.type.startsWith("image/");
+              if (!isImage) {
+                window.alert("Chỉ được phép upload ảnh!");
+                return Upload.LIST_IGNORE; 
+              }
+              return false; 
+            }}
             onChange={handleUploadChange}
             onPreview={handlePreview}
             onRemove={handleRemove}
@@ -247,11 +268,7 @@ const ColorImageUpload = ({
               </SortableItem>
             )}
           >
-            {fileList.length >= 15
-              ? null
-              : isDeletedProduct
-              ? null
-              : uploadButton}
+            {fileList.length >= 15 || isDeletedProduct ? null : uploadButton}
           </Upload>
         </SortableContext>
       </DndContext>

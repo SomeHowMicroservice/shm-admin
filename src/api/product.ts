@@ -64,6 +64,7 @@ export const createProduct = async (data: any) => {
     headers: {
       "Content-Type": "multipart/form-data",
     },
+    timeout: 10000,
   });
 };
 

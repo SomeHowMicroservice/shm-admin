@@ -120,6 +120,7 @@ const CreateProductPage = () => {
       };
     });
   };
+
   const handleSetThumbnail = (colorName: string, uid: string) => {
     setIsHaveThumbnail(true);
     setColorImages((prev) => {
@@ -148,6 +149,34 @@ const CreateProductPage = () => {
     return () => clearTimeout(timer);
   }, [colorImages]);
 
+  // FIX 2: Thêm function để clean up ảnh khi xóa variant
+  const cleanupImagesForRemovedVariants = () => {
+    const selectedColors = getSelectedColors();
+
+    setColorImages((prev) => {
+      const updated: typeof prev = {};
+
+      // Chỉ giữ lại ảnh của những màu còn được chọn
+      selectedColors.forEach((colorName: string) => {
+        if (prev[colorName]) {
+          updated[colorName] = prev[colorName];
+        }
+      });
+
+      return updated;
+    });
+  };
+
+  // FIX 2: Thêm useEffect để theo dõi khi variants thay đổi
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      cleanupImagesForRemovedVariants();
+      form.validateFields(["colorImages"]);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [form.getFieldsValue().variants]); // Theo dõi thay đổi của variants
+
   const getSelectedColors = () => {
     const formValues = form.getFieldsValue();
     const attrs = formValues.variants || [];
@@ -157,6 +186,39 @@ const CreateProductPage = () => {
       ),
     ];
     return selectedColors;
+  };
+
+  // FIX 2: Cập nhật hàm remove variant để cleanup ảnh ngay lập tức
+  const handleRemoveVariant = (
+    name: number,
+    remove: (index: number) => void
+  ) => {
+    const variant = form.getFieldValue(["variants", name]);
+    const removedColor = variant?.color;
+
+    // Xóa variant trước
+    remove(name);
+
+    // Sau khi xóa variant, kiểm tra xem còn variant nào dùng color này không
+    setTimeout(() => {
+      const formValues = form.getFieldsValue();
+      const remainingVariants = formValues.variants || [];
+      const remainingColors = remainingVariants
+        .map((attr: { color?: string }) => attr?.color)
+        .filter(Boolean);
+
+      // Nếu không còn variant nào dùng color đã xóa, xóa ảnh của color đó
+      if (removedColor && !remainingColors.includes(removedColor)) {
+        setColorImages((prev) => {
+          const updated = { ...prev };
+          delete updated[removedColor];
+          return updated;
+        });
+      }
+
+      // Validate lại form
+      form.validateFields(["colorImages"]);
+    }, 100);
   };
 
   const onFinish = async (values: ProductFormValues) => {
@@ -419,13 +481,7 @@ const CreateProductPage = () => {
                       >
                         {/* Icon xoá ở góc phải trên */}
                         <MinusCircleOutlined
-                          onClick={() => {
-                            const variant = form.getFieldValue([
-                              "variants",
-                              name,
-                            ]);
-                            remove(name);
-                          }}
+                          onClick={() => handleRemoveVariant(name, remove)}
                           className="absolute top-2 right-2 text-red-500 hover:text-red-700 text-xl cursor-pointer"
                         />
 

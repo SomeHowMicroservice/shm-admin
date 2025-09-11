@@ -309,35 +309,14 @@ export default function EditProductPage() {
 
   const handleColorImageChange = (
     colorName: string,
-    info: { fileList: UploadFile[] }
+    info: { fileList: MyUploadFile[] }
   ) => {
     setColorImages((prev: any) => {
-      const prevFiles = prev[colorName] || [];
-
-      const deletedOldImages = prevFiles
-        .filter((file: any) => file.isOld)
-        .filter(
-          (file: any) =>
-            !info.fileList.some((newFile) => newFile.uid === file.uid)
-        );
-
-      setDeletedImageIds((prevIds) => {
-        const newIds = deletedOldImages
-          .map((img: any) => img.uid!)
-          .filter((id: any) => !prevIds.includes(id));
-
-        return [...prevIds, ...newIds];
-      });
-
       const uniqueFiles = Array.from(
         new Map(
-          info.fileList.map((file, index) => [
+          info.fileList.map((file) => [
             file.uid,
-            {
-              ...file,
-              status: file.status || "done",
-              sortOrder: (file as MyUploadFile).sortOrder ?? index + 1,
-            },
+            { ...file, status: file.status || "done" },
           ])
         ).values()
       );
@@ -362,7 +341,44 @@ export default function EditProductPage() {
 
       return updated;
     });
+
+    setTimeout(() => {
+      form.validateFields(["colorImages"]);
+    }, 100);
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      form.validateFields(["colorImages"]);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [colorImages]);
+
+  const cleanupImagesForRemovedVariants = () => {
+    const selectedColors = getSelectedColors();
+
+    setColorImages((prev) => {
+      const updated: typeof prev = {};
+
+      selectedColors.forEach((colorName: string) => {
+        if (prev[colorName]) {
+          updated[colorName] = prev[colorName];
+        }
+      });
+
+      return updated;
+    });
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      cleanupImagesForRemovedVariants();
+      form.validateFields(["colorImages"]);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [form.getFieldsValue().variants]);
 
   const getSelectedColors = () => {
     const formValues = form.getFieldsValue();
@@ -373,6 +389,34 @@ export default function EditProductPage() {
       ),
     ];
     return selectedColors;
+  };
+
+  const handleRemoveVariant = (
+    name: number,
+    remove: (index: number) => void
+  ) => {
+    const variant = form.getFieldValue(["variants", name]);
+    const removedColor = variant?.color;
+
+    remove(name);
+
+    setTimeout(() => {
+      const formValues = form.getFieldsValue();
+      const remainingVariants = formValues.variants || [];
+      const remainingColors = remainingVariants
+        .map((attr: { color?: string }) => attr?.color)
+        .filter(Boolean);
+
+      if (removedColor && !remainingColors.includes(removedColor)) {
+        setColorImages((prev) => {
+          const updated = { ...prev };
+          delete updated[removedColor];
+          return updated;
+        });
+      }
+
+      form.validateFields(["colorImages"]);
+    }, 100);
   };
 
   const normalizeValue = (value: any) => {
@@ -836,22 +880,7 @@ export default function EditProductPage() {
                         className="relative space-y-4 border p-4 rounded-md"
                       >
                         <MinusCircleOutlined
-                          onClick={() => {
-                            const variant = form.getFieldValue([
-                              "variants",
-                              name,
-                            ]);
-                            console.log("Removing variant:", variant);
-
-                            if (variant?.id) {
-                              setDeleteVariantIds((prev) => {
-                                const newIds = [...prev, variant.id];
-                                console.log("Updated delete list:", newIds);
-                                return newIds;
-                              });
-                            }
-                            remove(name);
-                          }}
+                          onClick={() => handleRemoveVariant(name, remove)}
                           className="absolute top-2 right-2 text-red-500 hover:text-red-700 text-xl cursor-pointer"
                         />
 
