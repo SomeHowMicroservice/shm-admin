@@ -158,12 +158,9 @@ export default function EditProductPage() {
       const imageMap: Record<string, any[]> = {};
 
       images.forEach((img: any, index: number) => {
-        const match = img.url?.match(
-          /([0-9a-fA-F\-]{36})_\d+\.(jpg|jpeg|png|webp)$/i
-        );
-        if (!match) return;
+        const colorId = img.color?.id;
+        if (!colorId) return;
 
-        const colorId = match[1];
         const variant = productData.variants.find(
           (v: Variants) => v.color?.id === colorId
         ) as Variants | undefined;
