@@ -17,7 +17,7 @@ interface IAuthAction {
   logoutUser: () => void;
 }
 
-export const useAuthStore = create<IAuth & IAuthAction>()(
+export const useAppStore = create<IAuth & IAuthAction>()(
   immer((set) => ({
     ...initialState,
     setNewToken: ({ registration_token }) => {

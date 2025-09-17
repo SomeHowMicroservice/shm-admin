@@ -30,6 +30,7 @@ import ColorImageUpload, {
 } from "./components/ColorImageUpload";
 import { toPostgresTimestamp } from "@/utils/time";
 import { messageApiRef } from "@/components/layout/MessageProvider";
+import { useEventStore } from "@/stores/useEventStore";
 
 export interface ProductFormValues {
   title: string;
@@ -58,6 +59,8 @@ const { Option } = Select;
 
 const CreateProductPage = () => {
   const apiKey = process.env.NEXT_PUBLIC_TINY_MCE_API_KEY;
+
+  const { setCreating, setUploading, setLastEvent } = useEventStore();
 
   const router = useRouter();
   const [form] = Form.useForm();
@@ -328,6 +331,7 @@ const CreateProductPage = () => {
 
     try {
       setIsLoading(true);
+      setCreating(true);
       const res = await createProduct(formData);
       messageApiRef.success(res.data.message);
       router.push(`/products/${res.data.data.id}`);

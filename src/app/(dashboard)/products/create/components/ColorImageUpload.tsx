@@ -76,6 +76,8 @@ const ColorImageUpload = ({
   isDeletedProduct,
   handleColorImageChange,
   onSetThumbnail,
+  onImageRemove,
+  disabled,
 }: {
   colorName?: string;
   initialList?: CustomUploadFile[];
@@ -85,6 +87,8 @@ const ColorImageUpload = ({
     info: { fileList: CustomUploadFile[] }
   ) => void;
   onSetThumbnail?: (colorName: string, uid: string) => void;
+  onImageRemove?: (imageId: string, colorName: string) => void;
+  disabled?: boolean;
 }) => {
   const sortByOrder = (list: CustomUploadFile[] = []) =>
     [...list].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
@@ -163,7 +167,17 @@ const ColorImageUpload = ({
       handleColorImageChange(colorName, { fileList: newList });
     }
 
-    // FIX 1: Nếu ảnh bị xóa là thumbnail, tự động chọn ảnh đầu tiên làm thumbnail mới
+    // 👉 Gọi callback để parent xử lý việc thêm vào deletedImageIds
+    if (
+      (removedFile as CustomUploadFile)?.isOld &&
+      removedFile?.uid &&
+      onImageRemove &&
+      colorName
+    ) {
+      onImageRemove(String(removedFile.uid), colorName);
+    }
+
+    // Nếu ảnh bị xóa là thumbnail thì chọn ảnh đầu tiên làm thumbnail mới
     if (wasThumbnail && newList.length > 0 && onSetThumbnail && colorName) {
       setTimeout(() => {
         onSetThumbnail(colorName, String(newList[0].uid));
@@ -206,7 +220,7 @@ const ColorImageUpload = ({
         <SortableContext
           items={fileList.map((f) => String(f.uid))}
           strategy={horizontalListSortingStrategy}
-          disabled={isDeletedProduct}
+          disabled={isDeletedProduct || disabled}
         >
           <Upload
             listType="picture-card"
@@ -216,9 +230,9 @@ const ColorImageUpload = ({
               const isImage = file.type.startsWith("image/");
               if (!isImage) {
                 window.alert("Chỉ được phép upload ảnh!");
-                return Upload.LIST_IGNORE; 
+                return Upload.LIST_IGNORE;
               }
-              return false; 
+              return false;
             }}
             onChange={handleUploadChange}
             onPreview={handlePreview}
@@ -228,7 +242,7 @@ const ColorImageUpload = ({
               showRemoveIcon: true,
               showDownloadIcon: false,
             }}
-            disabled={isDeletedProduct}
+            disabled={isDeletedProduct || disabled}
             iconRender={(file) =>
               (file as CustomUploadFile).isThumbnail ? (
                 <Tooltip title="Thumbnail" className="absolute">
@@ -243,7 +257,7 @@ const ColorImageUpload = ({
                   <Button
                     icon={<StarOutlined />}
                     size="small"
-                    disabled={isDeletedProduct}
+                    disabled={isDeletedProduct || disabled}
                     shape="circle"
                     style={{
                       position: "absolute",

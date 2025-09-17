@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { loginUser } from "@/services/auth";
 import { Spin } from "antd";
 import { messageApiRef } from "@/components/layout/MessageProvider";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 const LoginForm = () => {
   const [form] = Form.useForm();
@@ -22,10 +23,13 @@ const LoginForm = () => {
     setIsSubmitting(true);
     try {
       const res = await loginUser(values);
+      useAuthStore.getState().setUser(res.data.data.user);
       messageApiRef.success(res.data.message);
       router.push("/");
     } catch (error) {
-      messageApiRef.error(error instanceof Error ? error.message : String(error));
+      messageApiRef.error(
+        error instanceof Error ? error.message : String(error)
+      );
     } finally {
       setIsSubmitting(false);
     }

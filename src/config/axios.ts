@@ -9,7 +9,7 @@ import qs from "qs";
 import { getCookie } from "@/utils/cookies";
 import { ACCESS_TOKEN } from "@/constants/token";
 import { setTokenServer } from "@/api/auth";
-import { useAppStore } from "@/stores/useAuthStore";
+import { useAuthStore } from "@/stores/useAuthStore";
 import { scheduleTokenRefresh, clearRefreshTimer } from "@/utils/token";
 
 type IRequestCb = (token: string) => void;
@@ -65,7 +65,7 @@ axiosRequest.interceptors.response.use(
     // Nếu lỗi là 401 → refresh
     if (error.response?.status === 401) {
       if (originalRequest._retry) {
-        useAppStore.getState().clearProfile();
+        useAuthStore.getState().clearProfile();
         clearRefreshTimer();
         return Promise.reject("Unauthorized.");
       }
@@ -97,7 +97,7 @@ axiosRequest.interceptors.response.use(
               onRefreshed(data.accessToken);
             })
             .catch(() => {
-              useAppStore.getState().clearProfile();
+              useAuthStore.getState().clearProfile();
               clearRefreshTimer();
               reject("Session expired. Please login again.");
             })

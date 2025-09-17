@@ -35,7 +35,9 @@ import {
   MinusCircleOutlined,
   PlusOutlined,
 } from "@ant-design/icons";
-import ColorImageUpload from "../create/components/ColorImageUpload";
+import ColorImageUpload, {
+  CustomUploadFile,
+} from "../create/components/ColorImageUpload";
 import { toPostgresTimestamp } from "@/utils/time";
 import { useParams } from "next/navigation";
 import { getProductById } from "@/api/product";
@@ -49,6 +51,9 @@ import isEqual from "lodash/isEqual";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import { messageApiRef } from "@/components/layout/MessageProvider";
+import { getImageByProductId } from "@/api/product";
+import { useEventStore } from "@/stores/useEventStore";
+import { has } from "lodash";
 
 export interface ProductFormValues {
   update_images: any;
@@ -82,7 +87,7 @@ export interface ProductFormValues {
 
 const { Option } = Select;
 interface MyUploadFile extends UploadFile<any> {
-  sortOrder: number;
+  sortOrder: number | undefined;
   isThumbnail: any;
   isOld?: boolean;
 }
@@ -103,15 +108,114 @@ export default function EditProductPage() {
   const [description, setDescription] = useState<string>("");
   const [deletedImageIds, setDeletedImageIds] = useState<string[]>([]);
   const [deleteVariantIds, setDeleteVariantIds] = useState<string[]>([]);
+  const [imageList, setImageList] = useState<MyUploadFile[]>([]);
   const [colorImages, setColorImages] = useState<
     Record<string, MyUploadFile[]>
+  >({});
+  const [variantColorHistory, setVariantColorHistory] = useState<
+    Record<number, string>
   >({});
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isActive, setIsActive] = useState<boolean>(true);
 
+  const { isCreating, isUploading, connectSSE } = useEventStore();
+
   const param = useParams();
   const productId = String(param.id);
   const router = useRouter();
+
+  useEffect(() => {
+    connectSSE();
+  }, [connectSSE]);
+
+  useEffect(() => {
+    if (!isCreating && !isUploading && isLoading) {
+      setIsLoading(false);
+    }
+  }, [isCreating, isUploading]);
+
+  useEffect(() => {
+    if (!isUploading) {
+      (async () => {
+        try {
+          await fetchImageByProductId();
+        } catch (err) {
+          console.error("fetchImage error:", err);
+        }
+      })();
+    }
+  }, [isUploading, productId]);
+
+  useEffect(() => {
+    fetchProductDetail();
+    fetchImageByProductId();
+  }, []);
+
+  const processImageList = useCallback(
+    (images: any[], productData?: Product) => {
+      if (!images.length || !productData?.variants) return {};
+
+      const imageMap: Record<string, any[]> = {};
+
+      images.forEach((img: any, index: number) => {
+        const match = img.url?.match(
+          /([0-9a-fA-F\-]{36})_\d+\.(jpg|jpeg|png|webp)$/i
+        );
+        if (!match) return;
+
+        const colorId = match[1];
+        const variant = productData.variants.find(
+          (v: Variants) => v.color?.id === colorId
+        ) as Variants | undefined;
+        if (!variant) return;
+
+        const colorName = variant.color?.name ?? `unknown-color-${colorId}`;
+        const fileObj = {
+          uid: img.id,
+          name: `image-${index + 1}`,
+          status: "done",
+          url: img.url,
+          thumbUrl: img.url,
+          isThumbnail: img.is_thumbnail || false,
+          sortOrder: img.sort_order ?? index + 1,
+          isOld: true,
+        };
+
+        if (!imageMap[colorName]) {
+          imageMap[colorName] = [];
+        }
+        imageMap[colorName].push(fileObj);
+      });
+
+      return imageMap;
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (imageList.length > 0 && product) {
+      const newColorImages = processImageList(imageList, product);
+      setColorImages(newColorImages);
+    }
+  }, [imageList, product, processImageList]);
+
+  useEffect(() => {
+    if (product) {
+      getAndSetData();
+    }
+  }, [product]);
+
+  useEffect(() => {
+    if (!isUploading && !isCreating) {
+      (async () => {
+        try {
+          await fetchImageByProductId();
+        } catch (err) {
+          console.error("fetchImage error after SSE:", err);
+        }
+      })();
+    }
+  }, [isCreating, isUploading, productId]);
 
   const handleBack = () => {
     router.push("/products");
@@ -127,9 +231,21 @@ export default function EditProductPage() {
     }
   };
 
-  useEffect(() => {
-    fetchProductDetail();
-  }, []);
+  const fetchImageByProductId = async () => {
+    try {
+      const res = await getImageByProductId(productId);
+      const images = res.data.data.images || [];
+      setImageList(images);
+
+      if (product) {
+        const newColorImages = processImageList(images, product);
+        setColorImages(newColorImages);
+      }
+    } catch (error) {
+      messageApiRef.error(error);
+      return [];
+    }
+  };
 
   const getAndSetData = useCallback(async () => {
     if (!product) return;
@@ -221,7 +337,7 @@ export default function EditProductPage() {
 
       const imageMap: Record<string, any[]> = {};
 
-      (product?.images || []).forEach((img: any, index: number) => {
+      (imageList || []).forEach((img: any, index: number) => {
         const match = img.url?.match(
           /([0-9a-fA-F\-]{36})_\d+\.(jpg|jpeg|png|webp)$/i
         );
@@ -299,17 +415,93 @@ export default function EditProductPage() {
     } finally {
       setLoadingOptions(false);
     }
-  }, [product, form]);
+  }, [product, form, imageList]);
 
-  useEffect(() => {
-    if (product) {
-      getAndSetData();
+  const handleColorChangeForVariant = (
+    oldColor: string,
+    newColor: string,
+    variantIndex: number
+  ) => {
+    if (!oldColor || oldColor === newColor) return;
+
+    // Kiểm tra xem màu cũ có còn được sử dụng bởi variant khác không
+    const allVariants = form.getFieldValue("variants") || [];
+    const otherVariantsUsingOldColor = allVariants.some(
+      (variant: any, index: number) =>
+        index !== variantIndex &&
+        (variant?.color === oldColor || variantColorHistory[index] === oldColor)
+    );
+
+    // Nếu màu cũ không còn được sử dụng, xóa tất cả ảnh của màu đó
+    if (!otherVariantsUsingOldColor) {
+      const oldColorImages = colorImages[oldColor] || [];
+
+      // Thêm tất cả ảnh cũ vào danh sách xóa
+      const oldImageIds = oldColorImages
+        .filter((img) => img.isOld && img.uid)
+        .map((img) => img.uid);
+
+      if (oldImageIds.length > 0) {
+        setDeletedImageIds((prev) => [...prev, ...oldImageIds]);
+      }
+
+      // Xóa ảnh khỏi colorImages
+      setColorImages((prev) => {
+        const updated = { ...prev };
+        delete updated[oldColor];
+        return updated;
+      });
+
+      console.log(
+        `Marked ${oldImageIds.length} images for deletion from color ${oldColor}`
+      );
     }
-  }, [product]);
+
+    // Kiểm tra nếu màu mới đã từng có ảnh trong originalData và bị xóa
+    if (originalData?.colorImages?.[newColor]) {
+      const originalImagesForNewColor = originalData.colorImages[newColor];
+
+      // Khôi phục ảnh từ deletedImageIds nếu có
+      const imageIdsToRestore = originalImagesForNewColor
+        .filter((img: any) => img.uid)
+        .map((img: any) => img.uid);
+
+      if (imageIdsToRestore.length > 0) {
+        // Loại bỏ khỏi deletedImageIds
+        setDeletedImageIds((prev) =>
+          prev.filter((id) => !imageIdsToRestore.includes(id))
+        );
+
+        // Khôi phục ảnh vào colorImages
+        setColorImages((prev) => ({
+          ...prev,
+          [newColor]: originalImagesForNewColor.map((img: any) => ({
+            ...img,
+            isOld: true,
+          })),
+        }));
+
+        console.log(
+          `Restored ${imageIdsToRestore.length} images for color ${newColor}`
+        );
+      }
+    } else {
+      // Nếu màu mới chưa có ảnh, khởi tạo mảng rỗng
+      setColorImages((prev) => {
+        if (!prev[newColor]) {
+          return {
+            ...prev,
+            [newColor]: [],
+          };
+        }
+        return prev;
+      });
+    }
+  };
 
   const handleColorImageChange = (
     colorName: string,
-    info: { fileList: MyUploadFile[] }
+    info: { fileList: CustomUploadFile[] }
   ) => {
     setColorImages((prev: any) => {
       const uniqueFiles = Array.from(
@@ -347,14 +539,6 @@ export default function EditProductPage() {
     }, 100);
   };
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      form.validateFields(["colorImages"]);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [colorImages]);
-
   const cleanupImagesForRemovedVariants = () => {
     const selectedColors = getSelectedColors();
 
@@ -371,6 +555,15 @@ export default function EditProductPage() {
     });
   };
 
+  const handleImageRemove = (imageId: string) => {
+    setDeletedImageIds((prev) => {
+      if (!prev.includes(imageId)) {
+        return [...prev, imageId];
+      }
+      return prev;
+    });
+  };
+
   useEffect(() => {
     const timer = setTimeout(() => {
       cleanupImagesForRemovedVariants();
@@ -379,6 +572,18 @@ export default function EditProductPage() {
 
     return () => clearTimeout(timer);
   }, [form.getFieldsValue().variants]);
+
+  useEffect(() => {
+    if (originalData?.variants) {
+      const initialHistory: Record<number, string> = {};
+      originalData.variants.forEach((variant: any, index: number) => {
+        if (variant.color) {
+          initialHistory[index] = variant.color;
+        }
+      });
+      setVariantColorHistory(initialHistory);
+    }
+  }, [originalData]);
 
   const getSelectedColors = () => {
     const formValues = form.getFieldsValue();
@@ -396,23 +601,49 @@ export default function EditProductPage() {
     remove: (index: number) => void
   ) => {
     const variant = form.getFieldValue(["variants", name]);
-    const removedColor = variant?.color;
+    const removedColor = variant?.color || variantColorHistory[name];
 
     remove(name);
+
+    // Xóa khỏi history
+    setVariantColorHistory((prev) => {
+      const updated = { ...prev };
+      delete updated[name];
+      return updated;
+    });
 
     setTimeout(() => {
       const formValues = form.getFieldsValue();
       const remainingVariants = formValues.variants || [];
-      const remainingColors = remainingVariants
-        .map((attr: { color?: string }) => attr?.color)
-        .filter(Boolean);
+      const remainingColors = [
+        ...remainingVariants
+          .map((attr: { color?: string }) => attr?.color)
+          .filter(Boolean),
+        ...Object.values(variantColorHistory).filter(
+          (color) => color && color !== removedColor
+        ),
+      ];
 
       if (removedColor && !remainingColors.includes(removedColor)) {
+        // Thêm tất cả ảnh của màu bị xóa vào danh sách xóa
+        const removedColorImages = colorImages[removedColor] || [];
+        const imageIdsToDelete = removedColorImages
+          .filter((img) => img.isOld && img.uid)
+          .map((img) => img.uid);
+
+        if (imageIdsToDelete.length > 0) {
+          setDeletedImageIds((prev) => [...prev, ...imageIdsToDelete]);
+        }
+
         setColorImages((prev) => {
           const updated = { ...prev };
           delete updated[removedColor];
           return updated;
         });
+
+        console.log(
+          `Removed variant - marked ${imageIdsToDelete.length} images for deletion from color ${removedColor}`
+        );
       }
 
       form.validateFields(["colorImages"]);
@@ -453,6 +684,7 @@ export default function EditProductPage() {
     // Khởi tạo FormData
     const formData = new FormData();
     let hasChanges = false;
+    let hasNewImages = false;
 
     // Helper function để thêm vào formData và đánh dấu có thay đổi
     const appendIfChanged = (key: string, newValue: any, oldValue: any) => {
@@ -467,7 +699,7 @@ export default function EditProductPage() {
       }
     };
 
-    // Kiểm tra thay đổi các field cơ bản
+    // Kiểm tra thay đổi các field cơ bản (giữ nguyên logic cũ)
     appendIfChanged("title", values.title, originalData.title);
     appendIfChanged("price", values.price, originalData.price);
     appendIfChanged("is_sale", values.is_sale, originalData.is_sale);
@@ -492,13 +724,12 @@ export default function EditProductPage() {
       );
     }
 
-    // Kiểm tra thay đổi tags
+    // Kiểm tra thay đổi tags và categories (giữ nguyên)
     if (!isEqual(values.tag_ids, originalData.tag_ids)) {
       values.tag_ids?.forEach((id) => formData.append("tag_ids", String(id)));
       hasChanges = true;
     }
 
-    // Kiểm tra thay đổi categories
     if (!isEqual(values.category_ids, originalData.category_ids)) {
       values.category_ids.forEach((id) =>
         formData.append("category_ids", String(id))
@@ -506,7 +737,7 @@ export default function EditProductPage() {
       hasChanges = true;
     }
 
-    // Thêm variant bị xóa
+    // Xử lý variants và variant bị xóa (giữ nguyên logic cũ)
     if (deleteVariantIds.length > 0) {
       deleteVariantIds.forEach((id) => {
         formData.append("delete_variant_ids", id);
@@ -514,31 +745,17 @@ export default function EditProductPage() {
       hasChanges = true;
     }
 
-    // Xử lý variants
+    // Xử lý variants (giữ nguyên logic cũ)
     const normalize = (val: any) => {
       if (val == null) return "";
       return String(val).trim();
     };
 
-    // Cải thiện hàm so sánh variant
     const isVariantChanged = (newVariant: any, oldVariant: any) => {
       const newColorId = colorMap[newVariant.color] || newVariant.color_id;
       const newSizeId = sizeMap[newVariant.size] || newVariant.size_id;
-
-      // Lấy ID từ original data
       const oldColorId = oldVariant.color_id || colorMap[oldVariant.color];
       const oldSizeId = oldVariant.size_id || sizeMap[oldVariant.size];
-
-      console.log("Comparing variant:", {
-        newSku: newVariant.sku,
-        oldSku: oldVariant.sku,
-        newQuantity: newVariant.quantity,
-        oldQuantity: oldVariant.quantity,
-        newColorId,
-        oldColorId,
-        newSizeId,
-        oldSizeId,
-      });
 
       return (
         normalize(newVariant.sku) !== normalize(oldVariant.sku) ||
@@ -551,7 +768,6 @@ export default function EditProductPage() {
     let newIndex = 0;
     let updateIndex = 0;
 
-    // Xử lý từng variant
     values.variants?.forEach((variant) => {
       const formVariant = {
         sku: normalize(variant.sku),
@@ -561,14 +777,12 @@ export default function EditProductPage() {
       };
 
       if (variant.id) {
-        // Variant đã tồn tại - kiểm tra có thay đổi không
         const originalVariant = originalData.variants.find(
           (v: any) => v.id === variant.id
         );
 
         if (originalVariant) {
           const changed = isVariantChanged(variant, originalVariant);
-          console.log(`Variant ${variant.id} changed:`, changed);
 
           if (changed) {
             formData.append(`update_variants[${updateIndex}][id]`, variant.id);
@@ -593,8 +807,6 @@ export default function EditProductPage() {
           }
         }
       } else {
-        // Variant mới
-        console.log("Adding new variant:", formVariant);
         formData.append(`new_variants[${newIndex}][sku]`, formVariant.sku);
         formData.append(
           `new_variants[${newIndex}][quantity]`,
@@ -621,7 +833,7 @@ export default function EditProductPage() {
       hasChanges = true;
     }
 
-    // Xử lý ảnh (giữ nguyên logic cũ)
+    // Xử lý ảnh cũ được cập nhật
     let imageUpdateIndex = 0;
     Object.entries(colorImages).forEach(([colorName, fileList]) => {
       const originalFiles = originalData.colorImages[colorName] || [];
@@ -653,9 +865,10 @@ export default function EditProductPage() {
       });
     });
 
-    // Xử lý ảnh mới
+    // Kiểm tra và xử lý ảnh mới
     let newImageIndex = 0;
     const usedFiles = new Set();
+    let hasNewImagesToUpload = false;
 
     for (const [colorName, fileList] of Object.entries(colorImages)) {
       const color_id = colorMap[colorName];
@@ -691,6 +904,8 @@ export default function EditProductPage() {
           usedFiles.add(fileKey);
           newImageIndex++;
           hasChanges = true;
+          hasNewImages = true;
+          hasNewImagesToUpload = true;
         }
       });
     }
@@ -702,18 +917,42 @@ export default function EditProductPage() {
 
     try {
       setIsLoading(true);
+
+      // Nếu có ảnh mới, kết nối SSE trước khi gọi API
+      if (hasNewImagesToUpload) {
+        // Kết nối SSE và set trạng thái
+        connectSSE();
+      }
+
       const res = await updateProduct(productId, formData);
       messageApiRef.success(res.data.message);
+
+      // Reset các state liên quan đến thay đổi
       setDeletedImageIds([]);
       setDeleteVariantIds([]);
       setProduct(res.data.data.product);
+
+      // Nếu không có ảnh mới, fetch ngay lập tức
+      if (!hasNewImagesToUpload) {
+        setImageList(res.data.data.product.images || []);
+        await fetchImageByProductId();
+      }
+
+      // Nếu có ảnh mới, việc fetch sẽ được xử lý bởi useEffect khi SSE hoàn thành
     } catch (error: any) {
       messageApiRef.error(error);
+      // Reset SSE state nếu có lỗi
+      if (hasNewImagesToUpload) {
+        useEventStore.getState().reset();
+      }
     } finally {
-      setIsLoading(false);
+      // Chỉ set isLoading = false nếu không có ảnh mới
+      // Nếu có ảnh mới, sẽ được set trong useEffect khi SSE hoàn thành
+      if (!hasNewImagesToUpload) {
+        setIsLoading(false);
+      }
     }
   };
-
   const handleDelete = async () => {
     try {
       setIsLoading(true);
@@ -949,6 +1188,25 @@ export default function EditProductPage() {
                                   `Color changed for variant ${name}:`,
                                   value
                                 );
+
+                                const currentVariant = form.getFieldValue([
+                                  "variants",
+                                  name,
+                                ]);
+                                const oldColor =
+                                  variantColorHistory[name] ||
+                                  currentVariant?.color;
+
+                                setVariantColorHistory((prev) => ({
+                                  ...prev,
+                                  [name]: value,
+                                }));
+
+                                handleColorChangeForVariant(
+                                  oldColor,
+                                  value,
+                                  name
+                                );
                                 setTimeout(() => {
                                   form.validateFields([[name, "color"]]);
                                 }, 0);
@@ -1080,6 +1338,8 @@ export default function EditProductPage() {
                       initialList={colorImages[String(colorName)] || []}
                       handleColorImageChange={handleColorImageChange}
                       onSetThumbnail={handleSetThumbnail}
+                      onImageRemove={handleImageRemove}
+                      disabled={isCreating && isUploading}
                     />
                   ))}
                 </div>

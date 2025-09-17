@@ -1,6 +1,6 @@
 import axiosRequest from "@/config/axios";
 import axios from "axios";
-import { useAppStore } from "@/stores/useAuthStore";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 export const login = (data: { username: string; password: string }) => {
   return axiosRequest.post("/admin/sign-in", data);
@@ -61,7 +61,7 @@ export const deleteTokenServer = async () => {
 export const logOut = async () => {
   try {
     const res = await axiosRequest.post("/auth/sign-out");
-    useAppStore.getState().clearProfile();
+    useAuthStore.getState().clearProfile();
     deleteTokenServer();
     return res;
   } catch (error) {

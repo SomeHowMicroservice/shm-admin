@@ -264,3 +264,7 @@ export const restoreProduct = (id: string) => {
 export const restoreProducts = (ids: string[]) => {
   return axiosRequest.put("/admin/products/restore", { ids });
 };
+
+export const getImageByProductId = (id: string) => {
+  return axiosRequest.get(`/admin/images?product_id=${id}`);
+};

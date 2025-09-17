@@ -4,7 +4,7 @@ import axios from "axios";
 import { getCookie } from "@/utils/cookies";
 import { ACCESS_TOKEN } from "@/constants/token";
 import { setTokenServer } from "@/api/auth";
-import { useAppStore } from "@/stores/useAuthStore";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 export const getAccessToken = () => {
   return Cookies.get("access_token");
@@ -84,7 +84,7 @@ async function refreshToken() {
   } catch (err) {
     // Refresh fail → đăng xuất local
     clearRefreshTimer();
-    useAppStore.getState().clearProfile();
+    useAuthStore.getState().clearProfile();
     // tuỳ bạn: có thể điều hướng sang /login ở đây
     // router.push('/login')
   }

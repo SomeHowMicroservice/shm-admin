@@ -1,22 +1,24 @@
 "use client";
 
 import { Menu, Layout, Drawer, Button, message, Modal } from "antd";
+import { useState } from "react";
+import Image from "next/image";
 import {
   DashboardOutlined,
   ShoppingCartOutlined,
   UserOutlined,
-  AppstoreOutlined,
   MenuOutlined,
   LogoutOutlined,
 } from "@ant-design/icons";
 import Link from "next/link";
-import { useState } from "react";
-import Image from "next/image";
 import { IoIosResize, IoIosColorFilter } from "react-icons/io";
 import { IoPricetagsOutline } from "react-icons/io5";
 import { MdOutlineCategory } from "react-icons/md";
-import { logOut } from "@/api/auth";
+import { AiOutlineProduct } from "react-icons/ai";
+import { TfiLayoutListPost } from "react-icons/tfi";
 import { useRouter } from "next/navigation";
+import { logOutUser } from "@/services/auth";
+import "@ant-design/v5-patch-for-react-19";
 
 const { Sider } = Layout;
 
@@ -26,11 +28,9 @@ const Sidebar = () => {
 
   const handleLogout = async () => {
     try {
-      const res = await logOut();
+      const res = await logOutUser();
       message.success(res.data.message);
-      setTimeout(() => {
-        router.push("/login");
-      }, 1500);
+      router.push("/login");
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       message.error(error.message);
@@ -51,6 +51,13 @@ const Sidebar = () => {
     });
   };
 
+  // Handle menu click events
+  const handleMenuClick = ({ key }: { key: string }) => {
+    if (key === "log-out") {
+      confirmLogout();
+    }
+  };
+
   const menuItems = [
     {
       key: "dashboard",
@@ -69,9 +76,14 @@ const Sidebar = () => {
     },
     {
       key: "posts",
-      icon: <AppstoreOutlined />,
-      label: <Link href="/posts">Post</Link>,
+      icon: <TfiLayoutListPost />,
+      label: <span>Post</span>,
       children: [
+        {
+          key: "posts-list",
+          icon: <TfiLayoutListPost />,
+          label: <Link href="/posts">Posts</Link>,
+        },
         {
           key: "post-topic",
           icon: <MdOutlineCategory />,
@@ -81,9 +93,14 @@ const Sidebar = () => {
     },
     {
       key: "products",
-      icon: <AppstoreOutlined />,
-      label: <Link href="/products">Product</Link>,
+      icon: <AiOutlineProduct />,
+      label: <span>Product</span>,
       children: [
+        {
+          key: "products-list",
+          icon: <AiOutlineProduct />,
+          label: <Link href="/products">Products</Link>,
+        },
         {
           key: "product-category",
           icon: <MdOutlineCategory />,
@@ -109,14 +126,7 @@ const Sidebar = () => {
     {
       key: "log-out",
       icon: <LogoutOutlined />,
-      label: (
-        <span
-          onClick={confirmLogout}
-          className="text-red-500 hover:text-red-600"
-        >
-          Đăng xuất
-        </span>
-      ),
+      label: <span className="text-red-500 hover:text-red-600">Đăng xuất</span>,
     },
   ];
 
@@ -133,7 +143,7 @@ const Sidebar = () => {
         open={visible}
         className="p-0"
       >
-        <Menu mode="inline" items={menuItems} />
+        <Menu mode="inline" items={menuItems} onClick={handleMenuClick} />
       </Drawer>
 
       <Sider
@@ -158,6 +168,7 @@ const Sidebar = () => {
           items={menuItems}
           defaultSelectedKeys={["dashboard"]}
           className="bg-gray-50"
+          onClick={handleMenuClick}
         />
       </Sider>
     </>
