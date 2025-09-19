@@ -20,8 +20,15 @@ import { useParams, useRouter } from "next/navigation";
 import { Editor } from "@tinymce/tinymce-react";
 import { messageApiRef } from "@/components/layout/MessageProvider";
 import { Post, Topic } from "@/types/post";
-import { deletePost, getAllTopics, getPostById, updatePost } from "@/api/post";
+import {
+  deletePost,
+  getAllTopics,
+  getContentByPostId,
+  getPostById,
+  updatePost,
+} from "@/api/post";
 import isEqual from "lodash/isEqual";
+import { useEventStore } from "@/stores/useEventStore";
 
 const { Option } = Select;
 
@@ -41,6 +48,10 @@ export default function DetailPostPage() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isDeletedTopic, setIsDeletedTopic] = useState<boolean>(false);
   const [originalData, setOriginalData] = useState<any>(null);
+  const [hasInitialContentLoaded, setHasInitialContentLoaded] = useState(false);
+
+  const { isCreatingPost, isUploadingPost, connectSSE, disconnectSSE } =
+    useEventStore();
 
   const fetchPostDetail = async () => {
     try {
@@ -62,28 +73,15 @@ export default function DetailPostPage() {
       form.setFieldsValue({
         title: postData.title,
         topic_id: postData.topic?.id,
-        content: postData.content,
+        content: content,
         is_published: postData.is_published,
         slug: postData.slug,
         published_at: new Date(postData.published_at).toLocaleString("vi-VN"),
       });
 
-      setContent(postData.content || "");
       setIsPublished(postData.is_published);
     } catch (error: any) {
-      messageApiRef.error(error);
-    } finally {
-      setLoadingOptions(false);
-    }
-  };
-
-  const fetchAllTopics = async () => {
-    try {
-      setLoadingOptions(true);
-      const res = await getAllTopics();
-      setTopics(res.data.data.topics);
-    } catch (error: any) {
-      messageApiRef.error(error);
+      messageApiRef.error(error || "Lỗi");
     } finally {
       setLoadingOptions(false);
     }
@@ -94,8 +92,74 @@ export default function DetailPostPage() {
       fetchPostDetail();
       fetchAllTopics();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    return () => {
+      disconnectSSE();
+    };
   }, [id]);
+
+  const fetchContentByPostId = async () => {
+    try {
+      const res = await getContentByPostId(id);
+      const fetchedContent = res.data.data.content;
+
+      setContent(fetchedContent);
+      setHasInitialContentLoaded(true);
+
+      form.setFieldValue("content", fetchedContent);
+
+      setOriginalData((prev) =>
+        prev
+          ? {
+              ...prev,
+              content: fetchedContent,
+            }
+          : null
+      );
+    } catch (error: any) {
+      messageApiRef.error(error);
+    }
+  };
+
+  const fetchAllTopics = async () => {
+    try {
+      setLoadingOptions(true);
+      const res = await getAllTopics();
+      setTopics(res.data.data.topics);
+    } catch (error: any) {
+      messageApiRef.error(error || "Lỗi");
+    } finally {
+      setLoadingOptions(false);
+    }
+  };
+
+  // Handle initial content loading based on isCreatingPost state
+  useEffect(() => {
+    if (post && !hasInitialContentLoaded) {
+      if (!isCreatingPost) {
+        fetchContentByPostId();
+      }
+    }
+  }, [post, isCreatingPost, hasInitialContentLoaded]);
+
+  useEffect(() => {
+    if (isCreatingPost && id) {
+      connectSSE(id, "post");
+    }
+  }, [connectSSE, id]); // Removed isCreatingPost from deps to prevent reconnection
+
+  // Handle content fetching after SSE completes
+  useEffect(() => {
+    if (
+      !isCreatingPost &&
+      !isUploadingPost &&
+      post &&
+      !hasInitialContentLoaded
+    ) {
+      fetchContentByPostId();
+      setIsLoading(false);
+    }
+  }, [isCreatingPost, isUploadingPost, post, hasInitialContentLoaded]);
 
   const handleTopicChange = (value: string) => {
     const selectedTopic = topics.find((t) => t.id === value);
@@ -166,7 +230,9 @@ export default function DetailPostPage() {
     try {
       const res = await updatePost(id, changedFields);
       messageApiRef.success(res.data.message);
-      router.push("/posts");
+      setPost(res.data.data.post);
+
+      setOriginalData(currentData);
     } catch (error: any) {
       messageApiRef.error(error || "Có lỗi xảy ra!");
     } finally {
@@ -180,7 +246,7 @@ export default function DetailPostPage() {
       messageApiRef.success(res.data.message);
       router.push("/posts/deleted");
     } catch (error: any) {
-      messageApiRef.error(error);
+      messageApiRef.error(error || "Lỗi");
     }
   };
 
@@ -195,6 +261,18 @@ export default function DetailPostPage() {
       </div>
     );
   }
+
+  if (isCreatingPost || isUploadingPost) {
+    return (
+      <div className="flex flex-col justify-center items-center p-12">
+        <Spin size="large" />
+        <div className="mt-4 text-gray-600">Đang xử lý hình ảnh...</div>
+      </div>
+    );
+  }
+
+  const isContentDisabled =
+    isCreatingPost || isUploadingPost || !hasInitialContentLoaded;
 
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white rounded shadow">
@@ -222,7 +300,7 @@ export default function DetailPostPage() {
           name="title"
           rules={[{ required: true, message: "Bắt buộc" }]}
         >
-          <Input />
+          <Input disabled={isContentDisabled} />
         </Form.Item>
 
         <Form.Item label="Slug" name="slug">
@@ -236,7 +314,11 @@ export default function DetailPostPage() {
             rules={[{ required: true, message: "Vui lòng chọn chủ đề" }]}
             className="flex-1"
           >
-            <Select placeholder="Chọn chủ đề" onChange={handleTopicChange}>
+            <Select
+              placeholder="Chọn chủ đề"
+              onChange={handleTopicChange}
+              disabled={isContentDisabled}
+            >
               {topics.map((t: Topic) => (
                 <Option key={t.id} value={t.id}>
                   {t.name}
@@ -256,41 +338,86 @@ export default function DetailPostPage() {
           label="Nội dung bài viết"
           name="content"
           rules={[
-            { required: true, message: "Vui lòng nhập nội dung bài viết" },
-          ]}
-          validateStatus={!form.getFieldValue("content") ? "error" : ""}
-          help={
-            !form.getFieldValue("content")
-              ? "Vui lòng nhập nội dung bài viết"
-              : ""
-          }
-        >
-          <Editor
-            apiKey={apiKey}
-            value={content}
-            onEditorChange={(newContent) => {
-              setContent(newContent);
-            }}
-            init={{
-              height: 500,
-              menubar: true,
-              plugins: "image link media table code",
-              toolbar:
-                "undo redo | bold italic underline | alignleft aligncenter alignright | image | code",
-              automatic_uploads: true,
-              file_picker_types: "image",
-              images_upload_handler: async (blobInfo: {
-                base64: () => any;
-                blob: () => { (): any; new (): any; type: any };
-              }) => {
-                return new Promise((resolve) => {
-                  const base64 = blobInfo.base64();
-                  const mime = blobInfo.blob().type;
-                  resolve(`data:${mime};base64,${base64}`);
-                });
+            {
+              validator: (_, value) => {
+                // Check both form value and content state
+                if (!value && !content) {
+                  return Promise.reject(
+                    new Error("Vui lòng nhập nội dung bài viết")
+                  );
+                }
+                return Promise.resolve();
               },
-            }}
-          />
+            },
+          ]}
+        >
+          <div style={{ position: "relative" }}>
+            {isContentDisabled && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: "rgba(255, 255, 255, 0.8)",
+                  zIndex: 10,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  border: "1px solid #d9d9d9",
+                  borderRadius: "6px",
+                }}
+              >
+                {isCreatingPost || isUploadingPost ? (
+                  <div className="flex items-center">
+                    <Spin size="small" />
+                    <span className="ml-2 text-gray-600">
+                      Đang xử lý hình ảnh...
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-gray-500">Đang tải nội dung...</span>
+                )}
+              </div>
+            )}
+            <Editor
+              apiKey={apiKey}
+              value={content}
+              disabled={isContentDisabled}
+              onEditorChange={(newContent) => {
+                if (!isContentDisabled) {
+                  setContent(newContent);
+                  // Update form field to prevent validation error
+                  form.setFieldValue("content", newContent);
+                }
+              }}
+              init={{
+                height: 500,
+                menubar: true,
+                plugins: "image link media table code",
+                toolbar:
+                  "undo redo | bold italic underline | alignleft aligncenter alignright | image | code",
+                automatic_uploads: true,
+                file_picker_types: "image",
+                images_upload_handler: async (blobInfo: {
+                  base64: () => any;
+                  blob: () => { (): any; new (): any; type: any };
+                }) => {
+                  return new Promise((resolve) => {
+                    const base64 = blobInfo.base64();
+                    const mime = blobInfo.blob().type;
+                    resolve(`data:${mime};base64,${base64}`);
+                  });
+                },
+
+                setup: (editor: any) => {
+                  editor.on("init", () => {});
+                },
+              }}
+              key={`editor-${id}-${hasInitialContentLoaded}`}
+            />
+          </div>
         </Form.Item>
 
         <Flex gap={20}>
@@ -299,7 +426,10 @@ export default function DetailPostPage() {
             name="is_published"
             valuePropName="checked"
           >
-            <Switch onChange={(val) => setIsPublished(val)} />
+            <Switch
+              onChange={(val) => setIsPublished(val)}
+              disabled={isContentDisabled}
+            />
           </Form.Item>
 
           <Form.Item label="Ngày đăng tải" name="published_at">
@@ -334,7 +464,7 @@ export default function DetailPostPage() {
                 htmlType="submit"
                 className="bg-blue-500"
                 loading={isLoading}
-                disabled={isLoading}
+                disabled={isLoading || isContentDisabled}
               >
                 {isLoading ? "Đang xử lý " : "Cập nhật"}
               </Button>
@@ -346,7 +476,7 @@ export default function DetailPostPage() {
                 okText="Xóa"
                 cancelText="Hủy"
                 onConfirm={handleDelete}
-                disabled={isLoading}
+                disabled={isLoading || isContentDisabled}
                 okButtonProps={{
                   loading: isLoading,
                 }}
@@ -356,7 +486,7 @@ export default function DetailPostPage() {
                   icon={<DeleteOutlined />}
                   className="bg-red-500 flex items-center justify-center"
                   loading={isLoading}
-                  disabled={isLoading}
+                  disabled={isLoading || isContentDisabled}
                   danger
                 >
                   {isLoading ? "Đang xử lý" : "Xóa"}

@@ -11,13 +11,11 @@ export default function MainLayout({
   children: ReactNode;
 }>) {
   return (
-    <SseProvider>
-      <div className="flex min-h-screen">
-        <Sidebar />
-        <div className="flex flex-col flex-1 bg-gray-50">
-          <div className="flex-1 p-4">{children}</div>
-        </div>
+    <div className="flex min-h-screen">
+      <Sidebar />
+      <div className="flex flex-col flex-1 bg-gray-50">
+        <div className="flex-1 p-4">{children}</div>
       </div>
-    </SseProvider>
+    </div>
   );
 }

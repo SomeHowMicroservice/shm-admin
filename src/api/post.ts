@@ -93,3 +93,7 @@ export const updatePost = (id: string, data: ICreatePostData) => {
 export const getAllTopicsNoAdmin = () => {
   return axiosRequest.get("/topics");
 };
+
+export const getContentByPostId = (id: string) => {
+  return axiosRequest.get(`/admin/posts/${id}/content`);
+};

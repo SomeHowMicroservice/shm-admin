@@ -9,6 +9,7 @@ import { Editor } from "@tinymce/tinymce-react";
 import { messageApiRef } from "@/components/layout/MessageProvider";
 import { ICreatePostData, Topic } from "@/types/post";
 import { createPost, getAllTopics } from "@/api/post";
+import { useEventStore } from "@/stores/useEventStore";
 
 const { Option } = Select;
 
@@ -23,6 +24,8 @@ export default function CreatePostPage() {
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [content, setContent] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  const { setCreatingPost } = useEventStore();
 
   useEffect(() => {
     const fetchAllTopics = async () => {
@@ -42,6 +45,7 @@ export default function CreatePostPage() {
 
   const onFinish = async (values: any) => {
     setIsLoading(true);
+    setCreatingPost(true);
     try {
       const payload: ICreatePostData = {
         title: values.title,
@@ -52,7 +56,7 @@ export default function CreatePostPage() {
 
       const res = await createPost(payload);
       messageApiRef.success(res.data.message);
-      router.push("/posts/");
+      router.push(`/posts/${res.data.data.id}`);
     } catch (error: any) {
       messageApiRef.error(error || "Có lỗi xảy ra!");
     } finally {

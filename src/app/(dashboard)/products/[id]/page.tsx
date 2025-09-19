@@ -53,7 +53,6 @@ import { useRouter } from "next/navigation";
 import { messageApiRef } from "@/components/layout/MessageProvider";
 import { getImageByProductId } from "@/api/product";
 import { useEventStore } from "@/stores/useEventStore";
-import { has } from "lodash";
 
 export interface ProductFormValues {
   update_images: any;
@@ -86,6 +85,7 @@ export interface ProductFormValues {
 }
 
 const { Option } = Select;
+
 interface MyUploadFile extends UploadFile<any> {
   sortOrder: number | undefined;
   isThumbnail: any;
@@ -117,43 +117,32 @@ export default function EditProductPage() {
   >({});
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isActive, setIsActive] = useState<boolean>(true);
+  const [dataInitialized, setDataInitialized] = useState<boolean>(false);
 
-  const { isCreating, isUploading, connectSSE } = useEventStore();
+  const { isCreating, isUploading, connectSSE, setCreating } = useEventStore();
 
   const param = useParams();
   const productId = String(param.id);
   const router = useRouter();
 
   useEffect(() => {
-    connectSSE();
-  }, [connectSSE]);
-
-  useEffect(() => {
-    if (!isCreating && !isUploading && isLoading) {
-      setIsLoading(false);
+    if (isCreating) {
+      connectSSE(productId, "product");
+      setCreating(false);
     }
-  }, [isCreating, isUploading]);
+  }, [connectSSE, isCreating, productId, setCreating]);
 
-  useEffect(() => {
-    if (!isUploading) {
-      (async () => {
-        try {
-          await fetchImageByProductId();
-        } catch (err) {
-          console.error("fetchImage error:", err);
-        }
-      })();
-    }
-  }, [isUploading, productId]);
-
+  // Fetch product detail on mount
   useEffect(() => {
     fetchProductDetail();
-    fetchImageByProductId();
   }, []);
 
+  // Process images when imageList changes and product is available
   const processImageList = useCallback(
     (images: any[], productData?: Product) => {
-      if (!images.length || !productData?.variants) return {};
+      if (!images.length || !productData?.variants) {
+        return {};
+      }
 
       const imageMap: Record<string, any[]> = {};
 
@@ -189,35 +178,6 @@ export default function EditProductPage() {
     []
   );
 
-  useEffect(() => {
-    if (imageList.length > 0 && product) {
-      const newColorImages = processImageList(imageList, product);
-      setColorImages(newColorImages);
-    }
-  }, [imageList, product, processImageList]);
-
-  useEffect(() => {
-    if (product) {
-      getAndSetData();
-    }
-  }, [product]);
-
-  useEffect(() => {
-    if (!isUploading && !isCreating) {
-      (async () => {
-        try {
-          await fetchImageByProductId();
-        } catch (err) {
-          console.error("fetchImage error after SSE:", err);
-        }
-      })();
-    }
-  }, [isCreating, isUploading, productId]);
-
-  const handleBack = () => {
-    router.push("/products");
-  };
-
   const fetchProductDetail = async () => {
     try {
       const res = await getProductById(productId);
@@ -229,23 +189,34 @@ export default function EditProductPage() {
   };
 
   const fetchImageByProductId = async () => {
+    if (!product) {
+      return [];
+    }
+
     try {
       const res = await getImageByProductId(productId);
       const images = res.data.data.images || [];
+
       setImageList(images);
 
-      if (product) {
-        const newColorImages = processImageList(images, product);
-        setColorImages(newColorImages);
-      }
+      // Process images immediately if product is available
+      const newColorImages = processImageList(images, product);
+      setColorImages(newColorImages);
+
+      return images;
     } catch (error) {
       messageApiRef.error(error);
       return [];
     }
   };
 
+  const handleBack = () => {
+    router.push("/products");
+  };
+
+  // Initialize all data when product is available
   const getAndSetData = useCallback(async () => {
-    if (!product) return;
+    if (!product || dataInitialized) return;
 
     try {
       const [tagsRes, colorsRes, categoriesRes, sizesRes] = await Promise.all([
@@ -311,7 +282,6 @@ export default function EditProductPage() {
       setCategories(mergedCategories);
       setColors(mergedColors);
       setSizes(mergedSizes);
-      setProduct(product);
       setIsSale(product.is_sale || false);
       setIsActive(product.is_active || true);
       setDescription(product.description || "");
@@ -332,39 +302,13 @@ export default function EditProductPage() {
         })
       );
 
-      const imageMap: Record<string, any[]> = {};
+      // Fetch images after setting up other data
+      let imageMap: Record<string, any[]> = {};
 
-      (imageList || []).forEach((img: any, index: number) => {
-        const match = img.url?.match(
-          /([0-9a-fA-F\-]{36})_\d+\.(jpg|jpeg|png|webp)$/i
-        );
-        if (!match) return;
-
-        const colorId = match[1];
-        const variant = (product?.variants || []).find(
-          (v: Variants) => v.color?.id === colorId
-        ) as Variants | undefined;
-        if (!variant) return;
-
-        const colorName = variant.color?.name ?? `unknown-color-${colorId}`;
-        const fileObj = {
-          uid: img.id,
-          name: `image-${index + 1}`,
-          status: "done",
-          url: img.url,
-          thumbUrl: img.url,
-          isThumbnail: img.is_thumbnail || false,
-          sortOrder: img.sort_order ?? index + 1,
-          isOld: true,
-        };
-
-        if (!imageMap[colorName]) {
-          imageMap[colorName] = [];
-        }
-        imageMap[colorName].push(fileObj);
-      });
-
-      setColorImages(imageMap);
+      if (!isCreating) {
+        const images = await fetchImageByProductId();
+        imageMap = processImageList(images, product);
+      }
 
       const initialObj = {
         title: product.title || "",
@@ -385,6 +329,16 @@ export default function EditProductPage() {
 
       setOriginalData(initialObj);
 
+      // Set variant color history
+      const initialHistory: Record<number, string> = {};
+      mappedVariants.forEach((variant: any, index: number) => {
+        if (variant.color) {
+          initialHistory[index] = variant.color;
+        }
+      });
+      setVariantColorHistory(initialHistory);
+
+      // Set form values
       setTimeout(() => {
         const formValues = {
           title: product.title || "",
@@ -407,12 +361,29 @@ export default function EditProductPage() {
         };
         form.setFieldsValue(formValues);
       }, 100);
+
+      setDataInitialized(true);
     } catch (error: any) {
       messageApiRef.error(error);
     } finally {
       setLoadingOptions(false);
     }
-  }, [product, form, imageList]);
+  }, [product, form, processImageList, isCreating, dataInitialized]);
+
+  // Initialize data when product is available
+  useEffect(() => {
+    if (product && !dataInitialized) {
+      getAndSetData();
+    }
+  }, [product, getAndSetData, dataInitialized]);
+
+  // Handle SSE completion - fetch images when upload is complete
+  useEffect(() => {
+    if (!isCreating && !isUploading && product && dataInitialized) {
+      fetchImageByProductId();
+      setIsLoading(false);
+    }
+  }, [isCreating, isUploading, product, dataInitialized]);
 
   const handleColorChangeForVariant = (
     oldColor: string,
@@ -448,10 +419,6 @@ export default function EditProductPage() {
         delete updated[oldColor];
         return updated;
       });
-
-      console.log(
-        `Marked ${oldImageIds.length} images for deletion from color ${oldColor}`
-      );
     }
 
     // Kiểm tra nếu màu mới đã từng có ảnh trong originalData và bị xóa
@@ -477,10 +444,6 @@ export default function EditProductPage() {
             isOld: true,
           })),
         }));
-
-        console.log(
-          `Restored ${imageIdsToRestore.length} images for color ${newColor}`
-        );
       }
     } else {
       // Nếu màu mới chưa có ảnh, khởi tạo mảng rỗng
@@ -570,18 +533,6 @@ export default function EditProductPage() {
     return () => clearTimeout(timer);
   }, [form.getFieldsValue().variants]);
 
-  useEffect(() => {
-    if (originalData?.variants) {
-      const initialHistory: Record<number, string> = {};
-      originalData.variants.forEach((variant: any, index: number) => {
-        if (variant.color) {
-          initialHistory[index] = variant.color;
-        }
-      });
-      setVariantColorHistory(initialHistory);
-    }
-  }, [originalData]);
-
   const getSelectedColors = () => {
     const formValues = form.getFieldsValue();
     const attrs = formValues.variants || [];
@@ -637,10 +588,6 @@ export default function EditProductPage() {
           delete updated[removedColor];
           return updated;
         });
-
-        console.log(
-          `Removed variant - marked ${imageIdsToDelete.length} images for deletion from color ${removedColor}`
-        );
       }
 
       form.validateFields(["colorImages"]);
@@ -681,7 +628,6 @@ export default function EditProductPage() {
     // Khởi tạo FormData
     const formData = new FormData();
     let hasChanges = false;
-    let hasNewImages = false;
 
     // Helper function để thêm vào formData và đánh dấu có thay đổi
     const appendIfChanged = (key: string, newValue: any, oldValue: any) => {
@@ -901,7 +847,6 @@ export default function EditProductPage() {
           usedFiles.add(fileKey);
           newImageIndex++;
           hasChanges = true;
-          hasNewImages = true;
           hasNewImagesToUpload = true;
         }
       });
@@ -918,38 +863,32 @@ export default function EditProductPage() {
       // Nếu có ảnh mới, kết nối SSE trước khi gọi API
       if (hasNewImagesToUpload) {
         // Kết nối SSE và set trạng thái
-        connectSSE();
+        connectSSE(productId, "product");
       }
 
       const res = await updateProduct(productId, formData);
       messageApiRef.success(res.data.message);
 
-      // Reset các state liên quan đến thay đổi
       setDeletedImageIds([]);
       setDeleteVariantIds([]);
       setProduct(res.data.data.product);
 
-      // Nếu không có ảnh mới, fetch ngay lập tức
       if (!hasNewImagesToUpload) {
         setImageList(res.data.data.product.images || []);
         await fetchImageByProductId();
+        setIsLoading(false);
       }
 
-      // Nếu có ảnh mới, việc fetch sẽ được xử lý bởi useEffect khi SSE hoàn thành
+      setDataInitialized(false);
     } catch (error: any) {
       messageApiRef.error(error);
-      // Reset SSE state nếu có lỗi
       if (hasNewImagesToUpload) {
         useEventStore.getState().reset();
       }
-    } finally {
-      // Chỉ set isLoading = false nếu không có ảnh mới
-      // Nếu có ảnh mới, sẽ được set trong useEffect khi SSE hoàn thành
-      if (!hasNewImagesToUpload) {
-        setIsLoading(false);
-      }
+      setIsLoading(false);
     }
   };
+
   const handleDelete = async () => {
     try {
       setIsLoading(true);
@@ -1133,10 +1072,6 @@ export default function EditProductPage() {
                               onChange={(e) => {
                                 // Force re-render với unique value
                                 const value = e.target.value;
-                                console.log(
-                                  `SKU changed for variant ${name}:`,
-                                  value
-                                );
                               }}
                             />
                           </Form.Item>
@@ -1152,11 +1087,6 @@ export default function EditProductPage() {
                               placeholder="Chọn size"
                               size="large"
                               onChange={(value) => {
-                                console.log(
-                                  `Size changed for variant ${name}:`,
-                                  value
-                                );
-                                // Force form validation
                                 setTimeout(() => {
                                   form.validateFields([[name, "size"]]);
                                 }, 0);
@@ -1181,11 +1111,6 @@ export default function EditProductPage() {
                               placeholder="Chọn màu"
                               size="large"
                               onChange={(value) => {
-                                console.log(
-                                  `Color changed for variant ${name}:`,
-                                  value
-                                );
-
                                 const currentVariant = form.getFieldValue([
                                   "variants",
                                   name,
@@ -1231,12 +1156,7 @@ export default function EditProductPage() {
                               size="large"
                               onChange={(e) => {
                                 const value = e.target.value;
-                                console.log(
-                                  `Quantity changed for variant ${name}:`,
-                                  value
-                                );
 
-                                // Đảm bảo chỉ update field cụ thể
                                 const currentVariants =
                                   form.getFieldValue("variants") || [];
                                 const updatedVariants = [...currentVariants];
@@ -1245,12 +1165,6 @@ export default function EditProductPage() {
                                     ...updatedVariants[name],
                                     quantity: Number(value),
                                   };
-
-                                  // Log để debug
-                                  console.log(
-                                    "Updated variants array:",
-                                    updatedVariants
-                                  );
                                 }
                               }}
                             />
@@ -1336,7 +1250,7 @@ export default function EditProductPage() {
                       handleColorImageChange={handleColorImageChange}
                       onSetThumbnail={handleSetThumbnail}
                       onImageRemove={handleImageRemove}
-                      disabled={isCreating && isUploading}
+                      disabled={isCreating || isUploading}
                     />
                   ))}
                 </div>

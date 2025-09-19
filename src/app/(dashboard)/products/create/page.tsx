@@ -334,7 +334,7 @@ const CreateProductPage = () => {
       setCreating(true);
       const res = await createProduct(formData);
       messageApiRef.success(res.data.message);
-      router.push(`/products/${res.data.data.id}`);
+      router.push(`/products/${res.data.data.id}?from=create`);
     } catch (error) {
       console.error(error);
       messageApiRef.error("Tạo sản phẩm thất bại");
